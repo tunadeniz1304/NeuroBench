@@ -33,3 +33,17 @@
   ≥ 85% (stretch), ≥ 89.3% (ANN parity).
 - Pseudo protocol decision: base has 5 languages × 20 classes; official sessions bring new languages,
   so pseudo-novel = 2 held-out base languages (fold 0: ca+de, fold 1: fr+rw), 4 sessions × 10-way 5-shot.
+
+## 2026-09-29 14:05 UTC — Phase 0 gate: GSC example (passed, with one noted metric drift)
+- `examples/gsc/benchmark_ann.py`: Footprint 109228, ConnSparsity 0.0, Acc 0.865334, ActSparsity 0.385446,
+  Eff_MACs 1728072, Dense 1880256 → matches README to ≥5 significant digits.
+- `examples/gsc/benchmark_snn.py`: Footprint 583900, Acc 0.856338, Eff_ACs 3289835, Dense 29030400 → match.
+  ActivationSparsity 0.9072 vs README 0.9669. The README numbers predate the v2 library refactor
+  (upstream commits cfb182c "refactor entire library", d895ea8 activation-sparsity refactor) and snntorch 1.0.
+  Accuracy and synaptic ops match exactly, so the model computation is identical; the drift is in the metric
+  implementation of the installed harness. Decision: gate passed; always re-measure baselines with the same
+  harness version (neurobench 2.3.0) and compare like with like; flag this in the final report.
+- S2S cache built: base_train 50000, base_val 10000, base_test 10000, evaluation 10 langs × 2000; T = 200 steps
+  (S2S drops the first of 201 frames, same as upstream).
+- `nbfscil/snn.py`: graph-capturable RadLIF RSNN with identical math/state_dict; `tests/test_snn_equivalence.py`
+  confirms bit-level agreement with the upstream module (incl. RNG stream of the random initial state).

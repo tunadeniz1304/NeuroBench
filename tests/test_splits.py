@@ -111,7 +111,7 @@ def test_official_sessions_seeded():
 def test_cache_shapes_and_labels():
     from nbfscil.sessions import load_cache
     tr, te = load_cache("base_train"), load_cache("base_test")
-    assert tr["x"].shape[1:] == (201, 20) and tr["x"].dtype == torch.int8
+    assert tr["x"].shape[1:] == (200, 20) and tr["x"].dtype == torch.int8
     assert len(tr["y"]) == 50000 and len(te["y"]) == 10000
     assert set(tr["y"].tolist()) == set(range(100))
     ev = load_cache("evaluation")
