@@ -1,0 +1,4 @@
+name: hebbian_cl2n
+weight_bits: 8
+center: true
+normalize: true
