@@ -1,0 +1,2 @@
+system: upstream_proto_snn
+# upstream pretrained RSNN checkpoint, prototype readout (NeuroBench SNN baseline)
