@@ -1,0 +1,14 @@
+# Python 3.13.15, CUDA 12.8 wheels (Colab T4)
+torch==2.11.0
+torchaudio==2.11.0
+neurobench==2.3.0
+snntorch==1.0.0
+tonic==1.6.0
+numpy==1.26.4
+llvmlite==0.44.0
+matplotlib==3.10.0
+numba==0.61.2
+pandas==2.2.3
+pytest==8.4.2
+scipy==1.16.3
+tqdm==4.67.3
