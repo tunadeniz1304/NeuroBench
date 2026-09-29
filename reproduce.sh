@@ -41,6 +41,16 @@ require_final() {
   fi
 }
 
+# true only if the checkpoint exists and reached its configured last epoch (train.py saves every epoch,
+# so an interrupted run leaves a partial checkpoint that must be retrained, not skipped)
+ckpt_done() {
+  [[ -f "$1" ]] && python - "$1" <<'PY'
+import sys, torch
+ck = torch.load(sys.argv[1], map_location="cpu", weights_only=False)
+sys.exit(0 if ck.get("epoch") == ck["cfg"]["train"]["epochs"] else 1)
+PY
+}
+
 stage_env() {
   python -m pip install -r requirements.txt
   if [[ ! -d third_party/neurobench/.git ]]; then
@@ -74,7 +84,7 @@ stage_pseudo() {
     for fold in "${PSEUDO_FOLDS[@]}"; do
       for s in "${SEEDS[@]}"; do
         ck="$CKPT_DIR/${name}_f${fold}_s$s.pt"
-        [[ -f "$ck" ]] || python -m nbfscil.train --config "$cfg" --seed "$s" --fold "$fold" --out "$ck" \
+        ckpt_done "$ck" || python -m nbfscil.train --config "$cfg" --seed "$s" --fold "$fold" --out "$ck" \
           | tee "$LOG_DIR/${name}_f${fold}_s$s.log"
         python -m nbfscil.pseudo_eval --ckpt "$ck" --learner "${PSEUDO_LEARNERS[@]}" --seeds 0 1 2 3 4 \
           | tee -a "$LOG_DIR/pseudo_eval.jsonl"
