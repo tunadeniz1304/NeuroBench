@@ -104,3 +104,27 @@
 - Full training fold 0 seed 0 started (checkpoint on Drive).
 - INVALID, discarded: a pseudo_eval of the same checkpoint path ran seconds after training started (notebook
   "run all"), i.e. on an untrained/partial checkpoint; all learners at chance level (3-10%). Not used for anything.
+
+## 2026-09-29 19:10 UTC — Phase 3: first pseudo-protocol result (fold 0, baseline recipe, backbone seed 0)
+- Backbone `configs/rsnn_baseline_train_amp.yaml`, fold 0, seed 0, 50 epochs on L4 (98 s/epoch).
+  Trained CE readout on pseudo-base val (60 classes): 92.23%.
+- Learners, 5 protocol seeds (`results/pseudo_eval.jsonl`), session avg / base / novel, %:
+  | learner | session avg | base (s0) | last (s4) | novel |
+  |---|---|---|---|---|
+  | euclid (upstream rule) | 60.04 ± 0.68 | 69.08 | 53.40 | 32.96 |
+  | float CL2N | 61.27 ± 0.67 | 70.02 | 54.94 | 36.81 |
+  | Hebbian CL2N 8-bit | 60.68 ± 0.28 | 67.68 | 55.23 | 39.32 |
+  | Hebbian CL2N 4-bit | 60.47 ± 0.44 | 67.47 | 55.04 | 39.24 |
+  | centre only, 8-bit | 36.29 ± 0.36 | 41.88 | 31.85 | 27.11 |
+  | L2 only, 8-bit | 3.06 ± 0.43 | 3.48 | 2.62 | 2.60 |
+- Reading: (1) The dominant loss is the readout swap: trained readout 92.2% vs prototype base 69-70%
+  (23 pts; official split: 93.5 → 84.2). (2) CL2N vs euclid: +1.2 float, +0.6 8-bit, +0.4 4-bit session avg —
+  within/near the ±0.5 noise band with one backbone seed; the clearer effect is on novel classes (+3.9 float,
+  +6.4 8-bit) at a 1.4-pt base cost. (3) 8/4-bit integer learning costs ≤0.8 pts vs float CL2N.
+  (4) Centring is required for low-bit prototypes: uncentred 8-bit L2 collapses to chance. Reproduced on synthetic
+  sparse heavy-tailed counts (float uncentred cosine 100%, uncentred 8-bit 20%): a few always-on neurons dominate
+  the unit vector, clip at w_max and the class-specific part rounds away. Not a code bug; kept as an ablation.
+  Centre-only (no norm term) is not NCM and loses 24 pts, so the normalisation is also needed.
+- Decision: the representation/readout mismatch is the main lever → run idea 3 next (cosine-classifier
+  pretraining, `configs/exp/cos_1024_amp.yaml`, fold 0 seed 0), then baseline seeds 1-2 for the noise level.
+  Learner choice (CL2N 8-bit) is provisional until ≥3 backbone seeds.

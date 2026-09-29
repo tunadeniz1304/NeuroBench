@@ -1,0 +1,5 @@
+# configs/exp/cos_1024.yaml (idea 3 + 7: cosine-classifier pretraining, zero initial state) with fp16 matmuls /
+# fp32 neuron state (train.amp). Speed option only.
+model: {name: rsnn, layer_sizes: [1024, 1024], dropout: 0.1, init_state: zeros}
+loss: {name: cosine, scale: 16, margin: 0.0, center: true}
+train: {lr: 0.001, weight_decay: 0.0001, epochs: 50, schedule: step, step_size: 20, batch_size: 256, eval_every: 5, amp: true}
