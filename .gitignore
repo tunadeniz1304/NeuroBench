@@ -1,0 +1,23 @@
+# data / audio
+data/
+datasets/
+*.wav
+*.opus
+*.flac
+*.mp3
+# checkpoints (large ones kept out; small final weights added explicitly)
+checkpoints/
+*.ckpt
+runs_tmp/
+# envs
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.env
+.env.*
+wandb/
+third_party/
+.ipynb_checkpoints/
+.pytest_cache/
