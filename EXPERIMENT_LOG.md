@@ -54,3 +54,16 @@
   and listed here, including bad ones.
 - OFFICIAL RUN 1/5 (Phase 2 reproduction): `configs/baseline_snn.yaml` (upstream checkpoint + prototype
   readout), seeds 0 1 2, commit ba7ad52. No decisions are tuned on it; it is the reference.
+
+## 2026-09-29 15:59 UTC — CPU-only housekeeping session (no GPU, no data)
+- Environment: no GPU, no MSWC data, no `$NB_DATA` cache. Nothing trained, no pseudo or official eval run;
+  official budget unchanged (1/5 used, result of run 1 not yet in `results/`).
+- pytest on CPU (Python 3.11, torch 2.14 CPU, neurobench 2.3.0, upstream @ e521c28 in third_party/):
+  22 passed, 3 skipped (need MSWC data / S2S cache). SNN equivalence and HW bit-exactness tests pass.
+- Checked `official_sessions` against upstream `IncrementalFewShot`: same sampling distribution
+  (random language order, 5 shots from samples 0–99, all 100 query samples 100–199); only the RNG differs.
+- Added `reproduce.sh` (stages env/cache/test/baseline/pseudo/final/official; `official` refuses to run
+  without CONFIRM_OFFICIAL=1 and a final config) and drafts README.md, report.md, PR_DRAFT.md,
+  LEADERBOARD_ROW.md with TODOs for every missing number.
+- Noted, not changed: `results/runs.csv` referenced by the resume procedure does not exist yet;
+  `extra_footprint_bytes` is reported next to, not inside, the harness Footprint and must be added in the report.
