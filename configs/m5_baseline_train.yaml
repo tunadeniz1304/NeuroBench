@@ -1,0 +1,4 @@
+# Upstream M5 ANN recipe (examples/mswc_fscil/mswc_fscil.py, PRE_TRAIN branch, non-spiking)
+model: {name: m5, n_channel: 256}
+loss: {name: ce}
+train: {lr: 0.01, weight_decay: 0.0001, epochs: 50, schedule: step, step_size: 20, batch_size: 256, eval_every: 5}

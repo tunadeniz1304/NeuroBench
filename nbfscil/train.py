@@ -22,7 +22,7 @@ import yaml
 
 from nbfscil.augment import build_augment
 from nbfscil.losses import build_loss
-from nbfscil.models import build_model
+from nbfscil.models import build_model, cache_prefix
 from nbfscil.sessions import load_cache, pseudo_split
 
 
@@ -59,8 +59,9 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
     torch.manual_seed(seed)
     np.random.seed(seed)
     classes = list(range(100)) if fold is None else pseudo_split(fold)[0]
-    xtr, ytr = subset(load_cache("base_train"), classes)
-    xva, yva = subset(load_cache("base_val"), classes)
+    pre = cache_prefix(cfg["model"])
+    xtr, ytr = subset(load_cache(pre + "base_train"), classes)
+    xva, yva = subset(load_cache(pre + "base_val"), classes)
     tcfg = cfg["train"]
     B = tcfg.get("batch_size", 256)
     epochs = tcfg["epochs"]

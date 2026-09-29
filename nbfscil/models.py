@@ -29,7 +29,33 @@ class UpstreamRSNN(nn.Module):
 
 from nbfscil.snn import RSNN
 
-MODELS = {"upstream_rsnn": UpstreamRSNN, "rsnn": RSNN}
+
+class M5Net(nn.Module):
+    """NeuroBench M5 ANN baseline (MFCC input), used only as the non-spiking reference."""
+    is_spiking = False
+    cache_prefix = "mfcc_"
+
+    def __init__(self, n_channel=256):
+        super().__init__()
+        from nbfscil.learners import UPSTREAM_FSCIL
+        import sys
+        if UPSTREAM_FSCIL not in sys.path:
+            sys.path.insert(0, UPSTREAM_FSCIL)
+        from M5 import M5
+        self.net = M5(n_input=20, stride=2, n_channel=n_channel, n_output=200,
+                      input_kernel=4, pool_kernel=2, drop=True)
+
+    def hidden(self, x):
+        return self.net(x, features_out=True).unsqueeze(1)  # (B, 1, 512): "counts" = features
+
+    def forward(self, x):
+        return self.net(x)
+
+MODELS = {"upstream_rsnn": UpstreamRSNN, "rsnn": RSNN, "m5": M5Net}
+
+
+def cache_prefix(mcfg):
+    return getattr(MODELS[mcfg["name"]], "cache_prefix", "")
 
 
 def build_model(mcfg):

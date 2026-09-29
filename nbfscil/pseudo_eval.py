@@ -18,7 +18,7 @@ import numpy as np
 import torch
 import yaml
 
-from nbfscil.models import build_model
+from nbfscil.models import build_model, cache_prefix
 from nbfscil.readout import build_learner
 from nbfscil.sessions import load_cache, pseudo_sessions, pseudo_split
 
@@ -32,7 +32,8 @@ def extract_counts(model, x, device, bs=500, seed=0):
     model.eval()
     out = []
     for i in range(0, len(x), bs):
-        out.append(model.hidden(x[i:i + bs].to(device).float()).sum(1).to(torch.int16).cpu())
+        h = model.hidden(x[i:i + bs].to(device).float()).sum(1)
+        out.append(h.to(torch.int16 if getattr(model, "is_spiking", True) else torch.float32).cpu())
     return torch.cat(out)
 
 
@@ -53,8 +54,9 @@ def backbone_counts(ckpt_path, device):
     model, ck = load_backbone(ckpt_path, device)
     assert ck["fold"] is not None, "pseudo protocol needs a backbone trained on a pseudo fold"
     feats = {"fold": ck["fold"]}
+    pre = cache_prefix(ck["cfg"]["model"])
     for split in ("base_train", "base_val"):
-        d = load_cache(split)
+        d = load_cache(pre + split)
         feats[split] = {"x": extract_counts(model, d["x"], device), "y": d["y"]}
     torch.save(feats, path)
     return feats
