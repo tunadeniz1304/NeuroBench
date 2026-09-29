@@ -47,3 +47,10 @@
   (S2S drops the first of 201 frames, same as upstream).
 - `nbfscil/snn.py`: graph-capturable RadLIF RSNN with identical math/state_dict; `tests/test_snn_equivalence.py`
   confirms bit-level agreement with the upstream module (incl. RNG stream of the random initial state).
+
+## 2026-09-29 14:40 UTC — Official eval budget definition
+- One "official run" = one invocation of `nbfscil.official_eval` (base test + evaluation languages),
+  covering one config over its seeds. Budget: 5. Every run is appended to `results/official_runs.jsonl`
+  and listed here, including bad ones.
+- OFFICIAL RUN 1/5 (Phase 2 reproduction): `configs/baseline_snn.yaml` (upstream checkpoint + prototype
+  readout), seeds 0 1 2, commit ba7ad52. No decisions are tuned on it; it is the reference.
