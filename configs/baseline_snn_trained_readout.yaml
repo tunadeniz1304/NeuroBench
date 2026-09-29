@@ -1,0 +1,2 @@
+system: upstream_trained_readout
+# upstream checkpoint with its original trained readout; session 0 only (leaderboard base-accuracy definition)

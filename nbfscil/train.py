@@ -80,11 +80,20 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
     sx = torch.zeros((B,) + tuple(X.shape[1:]), device=device)
     sy = torch.zeros(B, dtype=torch.long, device=device)
 
+    amp = tcfg.get("amp", False)
+
     def step():
         opt.zero_grad(set_to_none=False)
         xb = augment(sx)
-        loss = loss_fn(model, xb, sy)
+        # fp16 matmuls, fp32 neuron state; no loss scaling (initial logits are large enough that
+        # scaling overflows), non-finite gradients are zeroed instead (graph-safe, no host sync)
+        with torch.autocast("cuda", dtype=torch.float16, enabled=amp):
+            loss = loss_fn(model, xb, sy)
         loss.backward()
+        if amp:
+            for p in params:
+                if p.grad is not None:
+                    torch.nan_to_num_(p.grad, nan=0.0, posinf=0.0, neginf=0.0)
         if tcfg.get("grad_clip"):
             torch.nn.utils.clip_grad_norm_(params, tcfg["grad_clip"])
         opt.step()

@@ -1,0 +1,5 @@
+# Idea 3 (+7): cosine-classifier pretraining aligned with the CL2N deployment readout,
+# deterministic zero initial state. Same backbone size and schedule as the baseline recipe.
+model: {name: rsnn, layer_sizes: [1024, 1024], dropout: 0.1, init_state: zeros}
+loss: {name: cosine, scale: 16, margin: 0.0, center: true}
+train: {lr: 0.001, weight_decay: 0.0001, epochs: 50, schedule: step, step_size: 20, batch_size: 256, eval_every: 5}

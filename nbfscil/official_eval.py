@@ -95,7 +95,7 @@ def git_hash():
 
 
 @torch.no_grad()  # the harness does not disable autograd; metrics are unaffected
-def run_seed(cfg, seed, device, base_test, evaluation):
+def run_seed(cfg, seed, device, base_test, evaluation, base_only=False):
     torch.manual_seed(seed)
     np.random.seed(seed)
     system = build_system(cfg, device)  # loads backbone, builds harness model + incremental learner
@@ -113,6 +113,8 @@ def run_seed(cfg, seed, device, base_test, evaluation):
     res = bench.run(postprocessors=post(class_mask(range(N_BASE), device)), device=device)
     sessions.append(res)
     print(f"[seed {seed}] session 0: {res}", flush=True)
+    if base_only:
+        return {"seed": seed, "base_acc": res["ClassificationAccuracy"], "session0": res}
 
     # forward passes outside bench.run() also fire the harness activation hooks; clear them
     reset_hooks = lambda: bench.workload_metric_manager.reset_hooks(system.harness_model)
@@ -165,6 +167,7 @@ def main():
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     ap.add_argument("--note", default="")
     ap.add_argument("--smoke", action="store_true", help="run on random spikes; not an official run, not logged")
+    ap.add_argument("--base-only", action="store_true", help="session 0 only (base accuracy)")
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -175,11 +178,21 @@ def main():
     else:
         base_test = load_cache("base_test")
         evaluation = load_cache("evaluation")
-    runs = [run_seed(cfg, s, device, base_test, evaluation) for s in args.seeds]
+    runs = [run_seed(cfg, s, device, base_test, evaluation, args.base_only) for s in args.seeds]
     if args.smoke:
-        print("SMOKE OK", [round(r["session_avg"], 3) for r in runs])
+        print("SMOKE OK", [round(r.get("session_avg", r["base_acc"]), 3) for r in runs])
         return
 
+    if args.base_only:
+        summary = {"time": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                   "kind": "OFFICIAL_EVAL_BASE_ONLY", "config": args.config, "git": git_hash(),
+                   "seeds": args.seeds, "note": args.note,
+                   "base_acc_mean": float(np.mean([r["base_acc"] for r in runs])),
+                   "base_acc_std": float(np.std([r["base_acc"] for r in runs])), "runs": runs}
+        with open(os.path.join(REPO, "results", "official_runs.jsonl"), "a") as f:
+            f.write(json.dumps(summary) + "\n")
+        print(json.dumps({k: v for k, v in summary.items() if k != "runs"}, indent=1))
+        return
     summary = {
         "time": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
         "kind": "OFFICIAL_EVAL",

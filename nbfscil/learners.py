@@ -85,6 +85,28 @@ class UpstreamProtoSNN:
         return 0
 
 
+class UpstreamTrainedReadout(UpstreamProtoSNN):
+    """Upstream checkpoint with its original backprop-trained readout (no prototype conversion).
+    Only meaningful for session 0: reproduces the leaderboard's *base accuracy* definition."""
+
+    def __init__(self, cfg, device):
+        sp = _upstream_snn_module()
+        net = sp.SNN(input_shape=(256, 201, 20), neuron_type="RadLIF",
+                     layer_sizes=[1024, 1024, 200], normalization="batchnorm",
+                     dropout=0.1, bidirectional=False, use_readout_layer=True).to(device)
+        ckpt = cfg.get("checkpoint", os.path.join(UPSTREAM_FSCIL, "model_data", "mswc_rsnn_proto"))
+        net.load_state_dict(torch.load(ckpt, map_location=device))
+        self.net, self.device = net, device
+        self.harness_model = TorchModel(net)
+        self.harness_model.add_activation_module(sp.RadLIFLayer)
+
+    def learn_base(self):
+        pass
+
+    def learn_session(self, x, y):
+        raise RuntimeError("trained readout cannot learn new classes; use --base-only")
+
+
 class ProtoSystem:
     """Our backbone (nbfscil.models, trained on all 100 base classes) + an incremental readout learner
     from nbfscil.readout. The learner's integer (W, b) is written into the sum-over-time readout as
@@ -134,7 +156,8 @@ class ProtoSystem:
         return self.learner.state_bytes()
 
 
-SYSTEMS = {"upstream_proto_snn": UpstreamProtoSNN, "proto": ProtoSystem}
+SYSTEMS = {"upstream_proto_snn": UpstreamProtoSNN, "upstream_trained_readout": UpstreamTrainedReadout,
+           "proto": ProtoSystem}
 
 
 def build_system(cfg, device):
