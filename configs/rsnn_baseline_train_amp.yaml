@@ -1,0 +1,5 @@
+# Upstream SNN baseline recipe (configs/rsnn_baseline_train.yaml) with fp16 matmuls / fp32 neuron state
+# (train.amp). Speed option only; same model, loss, schedule and data.
+model: {name: rsnn, layer_sizes: [1024, 1024], dropout: 0.1, init_state: random}
+loss: {name: ce}
+train: {lr: 0.001, weight_decay: 0.0001, epochs: 50, schedule: step, step_size: 20, batch_size: 256, eval_every: 5, amp: true}
