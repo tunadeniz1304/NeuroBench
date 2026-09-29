@@ -86,3 +86,12 @@
   vs 3.65E5): neurobench 2.3.0 sums ops over all T = 200 steps per sample, the 2024 table is per step.
   Footprint and activation sparsity match. Decision: win condition 2 is checked against this rerun
   (same harness), never against the leaderboard numbers; both conventions are reported in the final table.
+
+## 2026-09-29 17:00 UTC — Phase 3 start: training throughput on the pseudo fold
+- 1-epoch smoke, fold 0 (60 classes, 117 steps/epoch), seed 0: fp32 476 s/epoch (4.1 s/step),
+  loss 7.41, val 5.1%; amp (`configs/rsnn_baseline_train_amp.yaml`) 253 s/epoch (2.2 s/step), loss 7.63, val 5.0%.
+- Full pseudo grid (2 folds x 3 seeds x 50 epochs) would take ~21 h with amp, ~40 h fp32: too long for one
+  Colab session. Throughput is also far below what the FLOP count suggests for a T4 (to be profiled).
+- Decision: use amp (1.9x faster, same first-epoch behaviour). Train fold 0 seed 0 first (~3.5 h),
+  run all learners on it (5 protocol seeds), then extend to more backbone seeds / fold 1.
+  Checkpoints go to Drive so a runtime reset does not lose them.
