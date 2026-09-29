@@ -12,8 +12,12 @@ three-factor learning rule that can later be built as a small digital neuromorph
 |---|---|---|---|---|---|---|---|
 | M5 ANN (leaderboard) | 97.09% | 89.27% | 6.03E6 | 0.783 | 2.59E7 | 0 (7.85E6 MACs) | `leaderboard.rst` |
 | SNN (leaderboard) | 93.48% | 75.27% | 1.36E7 | 0.916 | 3.39E6 | 3.65E5 | `leaderboard.rst` |
-| SNN baseline, our rerun (official run 1/5) | TODO | TODO | TODO | TODO | TODO | TODO | `results/official_runs.jsonl` |
+| SNN baseline, our rerun (official run 1/5) | 84.21 ± 0.06% ¹ | 76.09 ± 0.36% | 1.36E7 | 0.917 | 6.74E8 ² | 7.12E7 ² | `results/official_runs.jsonl` |
 | **Ours** | TODO | TODO | TODO | TODO | TODO | TODO | TODO |
+
+¹ prototype readout (the readout used in the incremental sessions).
+² neurobench 2.3.0 counts ops per sample over all T = 200 steps; the leaderboard values are ≈ 200× smaller
+(6.74E8 / 200 = 3.37E6, 7.12E7 / 200 = 3.56E5). Ops are compared only against our rerun on the same harness.
 
 All numbers of this repo are mean ± std over ≥ 3 seeds, measured with neurobench 2.3.0.
 The leaderboard SNN base accuracy (93.48%) uses the backprop-trained readout; this repo always reports

@@ -77,3 +77,12 @@
   sampler and the audio backend (torchaudio 2.11 vs 2.0.2 + sox_io) can explain.
 - Decision: reproduction accepted, Phase 2 gate passed, tag v0-baseline-repro. This run is the reference only;
   no design decision is tuned on it. Official budget used: 1/5.
+
+## 2026-09-29 16:30 UTC — Official run 1/5: full harness metrics, unit check
+- From `results/official_runs.jsonl` (seeds 0 1 2): Footprint 13 550 384 B, ConnectionSparsity 0.0199,
+  ActivationSparsity 0.917, Dense 6.742E8, Eff_MACs 0, Eff_ACs 7.121E7 (session 0; later sessions within 0.2%).
+  Per-session mean acc: 84.21 81.85 79.91 78.34 76.68 75.62 74.06 73.13 72.05 71.09 70.05; novel-class 59.52%.
+- Dense and Eff_ACs are ≈ 200× the leaderboard values (6.742E8/200 = 3.37E6 vs 3.39E6; 7.121E7/200 = 3.56E5
+  vs 3.65E5): neurobench 2.3.0 sums ops over all T = 200 steps per sample, the 2024 table is per step.
+  Footprint and activation sparsity match. Decision: win condition 2 is checked against this rerun
+  (same harness), never against the leaderboard numbers; both conventions are reported in the final table.

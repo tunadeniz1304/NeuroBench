@@ -24,4 +24,7 @@ Format copied from upstream `leaderboard.rst` (commit e521c28):
 - [ ] Footprint includes the learner state beyond parameters (`extra_footprint_bytes`), or the PR states
       explicitly that it is listed separately.
 - [ ] Eff_ACs / Dense / Activation Sparsity: which session they refer to (upstream copies session 0).
+- [ ] Units: neurobench 2.3.0 gives Dense / Eff_ACs summed over T = 200 steps; the existing rows are ≈ 200×
+      smaller (our baseline rerun: 6.74E8 / 7.12E7 vs 3.39E6 / 3.65E5). Report both, or ask the maintainers
+      which convention the table uses; never mix them in one table.
 - [ ] Column widths re-aligned so the RST grid table still parses (`rst2html` / docs build).

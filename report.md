@@ -57,7 +57,7 @@ epochs, seeds). Graph-capturable re-implementation, bit-level equal to upstream 
 ### 4.1 Baseline reproduction (Phase 2)
 | Config | Base (proto readout) | Session avg | Notes |
 |---|---|---|---|
-| Upstream SNN checkpoint + upstream prototype readout, official run 1/5 | TODO | TODO | `configs/baseline_snn.yaml`, seeds 0 1 2 |
+| Upstream SNN checkpoint + upstream prototype readout, official run 1/5 | 84.21 ± 0.06% | 76.09 ± 0.36% | `configs/baseline_snn.yaml`, seeds 0 1 2; paper proto session 0 ≈ 84.3%, leaderboard avg 75.27% |
 | RSNN re-trained with upstream recipe (pseudo protocol) | TODO | TODO | `configs/rsnn_baseline_train.yaml` |
 
 Known deviation: ActivationSparsity on the GSC example is 0.9072 vs 0.9669 in the upstream README
@@ -78,7 +78,7 @@ Backbone ablations (loss, augmentation, size): TODO.
 ### 4.3 Official evaluation (final configs only)
 | Run | Config | Commit | Seeds | Base | Session avg |
 |---|---|---|---|---|---|
-| 1/5 | `configs/baseline_snn.yaml` | ba7ad52 | 0 1 2 | TODO | TODO |
+| 1/5 | `configs/baseline_snn.yaml` | ba7ad52 (jsonl: b65d03e, hash read at run end) | 0 1 2 | 84.21 ± 0.06% | 76.09 ± 0.36% |
 | 2/5 | TODO | TODO | TODO | TODO | TODO |
 
 All runs are listed, including bad ones.
@@ -88,13 +88,24 @@ All runs are listed, including bad ones.
 |---|---|---|---|---|---|---|---|---|---|---|
 | M5 ANN (leaderboard) | 97.09% | 89.27% | 6.03E6 | – | 1 | 0.0 | 0.783 | 2.59E7 | 7.85E6 | 0 |
 | SNN (leaderboard) | 93.48% | 75.27% | 1.36E7 | – | 200 | 0.0 | 0.916 | 3.39E6 | 0 | 3.65E5 |
+| SNN, our rerun (neurobench 2.3.0) | 84.21% (proto) | 76.09% | 1.36E7 | 0 | 200 | 0.0199 | 0.917 | 6.74E8 | 0 | 7.12E7 |
 | Ours | TODO | TODO | TODO | TODO | 200 | TODO | TODO | TODO | TODO | TODO |
+
+Unit note: neurobench 2.3.0 reports Dense / Eff_ACs per sample summed over all T = 200 steps; the
+leaderboard values are ≈ 200× smaller (6.74E8 / 200 = 3.37E6 vs 3.39E6; 7.12E7 / 200 = 3.56E5 vs 3.65E5),
+consistent with a per-step count in the older harness. Ops and sparsity are therefore compared only
+with our rerun of the baseline on the same harness. Connection sparsity 0.0199 (vs 0.0 on the leaderboard)
+comes from zero entries in the checkpoint (e.g. the zeroed recurrent diagonal), counted by the v2 metric.
 
 Note: the upstream script copies session-0 synaptic ops to later sessions; we report the harness
 output per session as-is (TODO: per-session table in appendix).
 
 ### 4.5 Per-session accuracy
-TODO: figure with session 0–10 accuracy (ours, SNN baseline rerun), and novel-class-only accuracy.
+SNN baseline rerun, mean over seeds 0 1 2 (sessions 0–10):
+84.21, 81.85, 79.91, 78.34, 76.68, 75.62, 74.06, 73.13, 72.05, 71.09, 70.05.
+Novel-class accuracy averaged over sessions: 59.52% (paper: 57.23%).
+
+TODO: figure with session 0–10 accuracy (ours vs SNN baseline rerun), and novel-class-only accuracy.
 
 ### 4.6 Accuracy vs. cost (Pareto)
 TODO: session avg vs Eff_ACs (or Eff_MACs) and vs footprint, both baselines and ours.

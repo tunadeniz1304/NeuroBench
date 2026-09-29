@@ -67,3 +67,9 @@ No stronger entry than the 2024 baselines exists (leaderboard all branches, neur
 - Minimum: SNN session average **≥ 80%** (+5 pts over the SNN SOTA 75.27%).
 - Stretch: **≥ 85%**; ANN parity: **≥ 89.3%**.
 - Base accuracy measured with the incremental readout; Eff_ACs and footprint ≤ SNN baseline (3.65E5, 1.36E7 B).
+
+## Measured with neurobench 2.3.0 (official run 1/5, baseline SNN)
+- Dense 6.74E8, Eff_ACs 7.12E7 per sample (sum over T = 200 steps) vs leaderboard 3.39E6 / 3.65E5:
+  ratio ≈ 200 = T. Footprint (1.36E7) and activation sparsity (0.917) match the leaderboard.
+- Connection sparsity 0.0199 (leaderboard 0.0).
+- Consequence: win condition 2 (ops, footprint) is checked against this rerun, same harness version.
