@@ -15,7 +15,7 @@
 - Dataset: `mswc_fscil.tar.gz`, 651 MB, downloading to `/content/data` (local disk, not Drive/repo).
 - Leaderboard numbers verified in `leaderboard.rst`: M5 ANN 97.09/89.27, SNN 93.48/75.27.
 
-## 2026-09-29 13:40 UTC — Phase 0: environment
+## 2026-09-29 13:20 UTC — Phase 0: environment
 - Push auth fixed by user (fine-grained PAT); first push of scaffolding OK.
 - Installed neurobench 2.3.0, snntorch 1.0.0, tonic 1.6.0 (pulled numpy down to 1.26.4). Pinned in requirements.txt.
 - torchaudio 2.11 decodes opus at ~17 ms/sample (2 cores) → built an int8 S2S cache (`python -m nbfscil.cache`)
@@ -24,7 +24,7 @@
 - Upstream RSNN training step: ~3.3 s/batch (Python time loop, CPU-bound launches) → ~9 h for the 50-epoch recipe.
   Not acceptable; will reimplement RadLIF graph-capturable (same math) and use CUDA graphs.
 
-## 2026-09-29 13:45 UTC — Phase 1: reconnaissance (gate passed)
+## 2026-09-29 13:27 UTC — Phase 1: reconnaissance (gate passed)
 - `docs/protocol.md` and `docs/landscape.md` written.
 - Key finding: leaderboard SNN base 93.48% uses the trained readout; session average uses prototypes
   (paper: prototype session 0 ≈ 84.3%). Most of the SNN deficit is the representation's poor fit to a
@@ -34,7 +34,7 @@
 - Pseudo protocol decision: base has 5 languages × 20 classes; official sessions bring new languages,
   so pseudo-novel = 2 held-out base languages (fold 0: ca+de, fold 1: fr+rw), 4 sessions × 10-way 5-shot.
 
-## 2026-09-29 14:05 UTC — Phase 0 gate: GSC example (passed, with one noted metric drift)
+## 2026-09-29 13:34 UTC — Phase 0 gate: GSC example (passed, with one noted metric drift)
 - `examples/gsc/benchmark_ann.py`: Footprint 109228, ConnSparsity 0.0, Acc 0.865334, ActSparsity 0.385446,
   Eff_MACs 1728072, Dense 1880256 → matches README to ≥5 significant digits.
 - `examples/gsc/benchmark_snn.py`: Footprint 583900, Acc 0.856338, Eff_ACs 3289835, Dense 29030400 → match.
@@ -48,7 +48,7 @@
 - `nbfscil/snn.py`: graph-capturable RadLIF RSNN with identical math/state_dict; `tests/test_snn_equivalence.py`
   confirms bit-level agreement with the upstream module (incl. RNG stream of the random initial state).
 
-## 2026-09-29 14:40 UTC — Official eval budget definition
+## 2026-09-29 13:51 UTC — Official eval budget definition
 - One "official run" = one invocation of `nbfscil.official_eval` (base test + evaluation languages),
   covering one config over its seeds. Budget: 5. Every run is appended to `results/official_runs.jsonl`
   and listed here, including bad ones.
