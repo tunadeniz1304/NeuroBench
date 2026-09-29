@@ -53,3 +53,17 @@ Source of truth: `third_party/neurobench/examples/mswc_fscil/mswc_fscil.py`,
 - Official eval (base test + evaluation classes) only for final configs, ≤5 runs total.
 - Design decisions use the pseudo-incremental protocol built from base train/val only (Phase 3).
 - No replay of raw audio; any stored statistics count towards footprint.
+
+## Important: which readout the leaderboard numbers use
+Per the NeuroBench paper (Nat. Commun. 16:1545, 2025; see `docs/landscape.md`), the leaderboard
+*base accuracy* (SNN 93.48%) was measured with the backprop-trained readout, while the
+*session average* uses the prototype readout from session 0 on. The upstream script
+(`mswc_fscil.py`) evaluates session 0 **after** the prototype conversion, so a faithful rerun
+gives the prototype session-0 accuracy (paper: ~84.3% for the SNN, i.e. −9.17 pts).
+We always report base accuracy with the same readout that is used in the incremental sessions.
+
+## Target (Phase 1 gate)
+No stronger entry than the 2024 baselines exists (leaderboard all branches, neurobench.ai, literature, 2026-09).
+- Minimum: SNN session average **≥ 80%** (+5 pts over the SNN SOTA 75.27%).
+- Stretch: **≥ 85%**; ANN parity: **≥ 89.3%**.
+- Base accuracy measured with the incremental readout; Eff_ACs and footprint ≤ SNN baseline (3.65E5, 1.36E7 B).
