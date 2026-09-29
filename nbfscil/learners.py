@@ -85,7 +85,56 @@ class UpstreamProtoSNN:
         return 0
 
 
-SYSTEMS = {"upstream_proto_snn": UpstreamProtoSNN}
+class ProtoSystem:
+    """Our backbone (nbfscil.models, trained on all 100 base classes) + an incremental readout learner
+    from nbfscil.readout. The learner's integer (W, b) is written into the sum-over-time readout as
+    W and b / T, so the harness computes exactly `W S + b` on the spike counts S."""
+
+    def __init__(self, cfg, device):
+        from nbfscil.models import build_model
+        from nbfscil.readout import build_learner
+        from nbfscil.snn import SumReadout
+        ck = torch.load(cfg["checkpoint"], map_location="cpu", weights_only=False)
+        assert ck["fold"] is None, "official evaluation needs a backbone trained on all base classes"
+        net = build_model(ck["cfg"]["model"]).to(device)
+        net.load_state_dict(ck["model"])
+        dim = net.snn[-1].W.in_features
+        net.snn[-1] = SumReadout(dim, N_CLASSES, use_bias=True).to(device)
+        net.snn[-1].W.weight.data.zero_()
+        net.snn[-1].W.bias.data.zero_()
+        self.net, self.device = net, device
+        self.harness_model = TorchModel(net)  # eval()
+        self.harness_model.add_activation_module(net.activation_module)
+        self.learner = build_learner(cfg["learner"], N_CLASSES, dim)
+        self.T = None
+
+    @torch.no_grad()
+    def _counts(self, x):
+        feats, T = spike_counts(self.net.snn[:-1], x)
+        self.T = T
+        return feats.cpu()
+
+    def _write_readout(self):
+        W, b = self.learner.readout()
+        self.net.snn[-1].W.weight.data.copy_(W.to(self.device))
+        self.net.snn[-1].W.bias.data.copy_((b / self.T).to(self.device))
+
+    def learn_base(self):
+        train = load_cache("base_train")
+        feats = torch.cat([self._counts(train["x"][i:i + 5000].to(self.device).float())
+                           for i in range(0, len(train["x"]), 5000)])
+        self.learner.fit_base(feats, train["y"], list(range(100)))
+        self._write_readout()
+
+    def learn_session(self, x, y):
+        self.learner.learn(self._counts(x), y.cpu(), sorted(set(y.tolist())))
+        self._write_readout()
+
+    def extra_state_bytes(self):
+        return self.learner.state_bytes()
+
+
+SYSTEMS = {"upstream_proto_snn": UpstreamProtoSNN, "proto": ProtoSystem}
 
 
 def build_system(cfg, device):

@@ -44,7 +44,9 @@ class HebbianCL2N:
     """
 
     def __init__(self, n_classes=200, dim=1024, weight_bits=8, center=True, normalize=True,
-                 acc_bits=16, stochastic_round=True, seed=0, **_):
+                 acc_bits=24, stochastic_round=True, seed=0, **_):
+        # 24-bit bank covers the offline base classes (500 samples x 200 steps); an online
+        # 5-shot session needs only 11 bits (5 x 200 = 1000).
         self.rule = ThreeFactorPrototypes(n_classes, dim, weight_bits=weight_bits, acc_bits=acc_bits,
                                           center=center, normalize=normalize,
                                           stochastic_round=stochastic_round, seed=seed)
@@ -64,7 +66,35 @@ class HebbianCL2N:
         return self.rule.state_bytes()
 
 
-LEARNERS = {"euclid_proto": EuclidProto, "hebbian_cl2n": HebbianCL2N}
+class FloatCL2N:
+    """Float reference of HebbianCL2N (no quantisation) — measures the cost of integer/low-bit learning."""
+
+    def __init__(self, n_classes=200, dim=1024, center=True, **_):
+        self.center = center
+        self.mu = torch.zeros(dim)
+        self.W = torch.zeros(n_classes, dim)
+        self.b = torch.zeros(n_classes)
+
+    def fit_base(self, feats, labels, classes):
+        if self.center:
+            self.mu = feats.float().mean(0)
+        self.learn(feats, labels, classes)
+
+    def learn(self, feats, labels, classes):
+        for c in classes:
+            d = feats[labels == c].float().mean(0) - self.mu
+            w = d / d.norm().clamp_min(1e-9)
+            self.W[c] = w
+            self.b[c] = -(self.mu @ w)
+
+    def readout(self):
+        return self.W, self.b
+
+    def state_bytes(self):
+        return self.mu.numel() * 4
+
+
+LEARNERS = {"euclid_proto": EuclidProto, "hebbian_cl2n": HebbianCL2N, "float_cl2n": FloatCL2N}
 
 
 def build_learner(cfg, n_classes, dim):

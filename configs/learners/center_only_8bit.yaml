@@ -1,0 +1,5 @@
+# ablation: centring without normalisation (integer mean prototypes, no L2)
+name: hebbian_cl2n
+weight_bits: 8
+center: true
+normalize: false
