@@ -95,3 +95,12 @@
 - Decision: use amp (1.9x faster, same first-epoch behaviour). Train fold 0 seed 0 first (~3.5 h),
   run all learners on it (5 protocol seeds), then extend to more backbone seeds / fold 1.
   Checkpoints go to Drive so a runtime reset does not lose them.
+
+## 2026-09-29 17:40 UTC — Phase 3: moved to an L4 runtime
+- Colab gave an NVIDIA L4 (23 GB) instead of the requested A100. Fresh runtime: repo, env and S2S cache rebuilt
+  (cache ~3 min on this machine), pytest 25 passed (no skips).
+- 1-epoch smoke, fold 0 seed 0, amp: 98.3 s/epoch (T4: 253 s) → ~1.4 h per 50-epoch backbone, ~9 h for the
+  2 folds x 3 seeds grid.
+- Full training fold 0 seed 0 started (checkpoint on Drive).
+- INVALID, discarded: a pseudo_eval of the same checkpoint path ran seconds after training started (notebook
+  "run all"), i.e. on an untrained/partial checkpoint; all learners at chance level (3-10%). Not used for anything.
