@@ -128,3 +128,23 @@
 - Decision: the representation/readout mismatch is the main lever → run idea 3 next (cosine-classifier
   pretraining, `configs/exp/cos_1024_amp.yaml`, fold 0 seed 0), then baseline seeds 1-2 for the noise level.
   Learner choice (CL2N 8-bit) is provisional until ≥3 backbone seeds.
+
+## 2026-09-29 20:40 UTC — Phase 4, idea 3: cosine-classifier pretraining (fold 0, seed 0) — large gain
+- Backbone `configs/exp/cos_1024_amp.yaml` (centred cosine classifier, scale 16, zero initial state), fold 0,
+  seed 0, 50 epochs; cosine-readout val 91.73% (CE baseline: 92.23%).
+- Learners, 5 protocol seeds, session avg / base / novel, % (Δ vs baseline backbone, same learner):
+  | learner | session avg | base | novel |
+  |---|---|---|---|
+  | euclid | 83.07 ± 0.35 (+23.0) | 88.03 | 69.08 |
+  | float CL2N | 82.61 ± 0.39 (+21.3) | 88.05 | 66.03 |
+  | Hebbian CL2N 8-bit | 81.90 ± 0.46 (+21.2) | 87.17 | 67.07 |
+  | Hebbian CL2N 4-bit | 81.87 ± 0.40 (+21.4) | 87.10 | 67.21 |
+  | centre only, 8-bit | 75.66 ± 0.31 | 83.83 | 49.31 |
+  | L2 only, 8-bit | 12.44 ± 1.27 | 15.07 | 7.67 |
+- Reading: the readout-swap loss shrinks from 23 pts (92.2 → 69.1) to ~4 pts (91.7 → 88.0); novel accuracy
+  doubles (33 → 67-69). Far outside the ±0.5 noise band even with one backbone seed.
+  On this backbone float euclid is ahead of CL2N (+0.5 float CL2N, +1.2 8-bit); with one backbone seed this
+  ordering is not yet established. 8-bit integer learning costs 0.7 pts vs float CL2N; 4-bit = 8-bit.
+- Decision: idea 3 adopted as the backbone recipe. Queue reordered: cosine seeds 1-2 first (confirm the gain and
+  the learner ordering), then baseline seeds 1-2. If euclid stays ahead, add an integer three-factor variant of
+  the Euclidean prototype rule (w = mean count, b = -|w|²/2) with a bit-exact HW model.
