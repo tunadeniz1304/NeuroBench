@@ -67,3 +67,13 @@
   LEADERBOARD_ROW.md with TODOs for every missing number.
 - Noted, not changed: `results/runs.csv` referenced by the resume procedure does not exist yet;
   `extra_footprint_bytes` is reported next to, not inside, the harness Footprint and must be added in the report.
+
+## 2026-09-29 16:02 UTC — OFFICIAL RUN 1/5 result: baseline SNN reproduction (Phase 2 gate passed)
+- Config `configs/baseline_snn.yaml` (upstream `mswc_rsnn_proto` checkpoint + upstream prototype readout),
+  seeds 0 1 2, run started at commit ba7ad52. The `git` field in `results/official_runs.jsonl` reads b65d03e
+  because the hash is taken when the run finishes; commits made during the run were not loaded by it.
+- Base accuracy (prototype readout, session 0): 84.21% ± 0.06 (paper: ~84.3% = 93.48 − 9.17).
+- Session average: 76.09% ± 0.36 (leaderboard SNN: 75.27%). Difference within what the unseeded upstream
+  sampler and the audio backend (torchaudio 2.11 vs 2.0.2 + sox_io) can explain.
+- Decision: reproduction accepted, Phase 2 gate passed, tag v0-baseline-repro. This run is the reference only;
+  no design decision is tuned on it. Official budget used: 1/5.
