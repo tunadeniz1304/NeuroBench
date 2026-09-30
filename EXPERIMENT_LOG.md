@@ -210,3 +210,22 @@
   gradient explosion from fp16 overflow. Accept if seed std drops to ~1-2 pts without lowering the mean (78.0).
 - Baseline backbone seed 2 (`rsnn_baseline_train_amp`) restarted from epoch 1 at 16:13 (its interrupted run
   predates the resume feature); results pending.
+
+## 2026-09-30 17:40 UTC — Phase 4: CE baseline backbone, 3 seeds complete
+- `configs/rsnn_baseline_train_amp.yaml`, fold 0, seed 2 (restarted from epoch 1; trained CE readout val 91.80;
+  s0 92.23, s1 92.08). Session avg over backbone seeds 0/1/2, 5 protocol seeds each, %:
+  | learner | s0 | s1 | s2 | CE mean ± std | cosine (step) mean ± std | Δ |
+  |---|---|---|---|---|---|---|
+  | euclid | 60.04 | 61.86 | 59.21 | 60.37 ± 1.36 | 78.00 ± 5.24 | +17.6 |
+  | float CL2N | 61.27 | 62.16 | 61.35 | 61.59 ± 0.49 | 77.50 ± 5.08 | +15.9 |
+  | Hebbian CL2N 8-bit | 60.68 | 63.20 | 60.33 | 61.40 ± 1.57 | 76.51 ± 5.66 | +15.1 |
+  | Hebbian CL2N 4-bit | 60.47 | 63.12 | 60.01 | 61.20 ± 1.68 | 76.42 ± 5.68 | +15.2 |
+  | centre only, 8-bit | 36.29 | 37.52 | 34.65 | 36.15 ± 1.44 | — | |
+  | L2 only, 8-bit | 3.06 | 2.64 | 2.55 | 2.75 ± 0.27 | — | |
+- Reading: (1) The CE backbone is stable across seeds (std 0.5-1.7, val 91.8-92.2); the cosine-pretraining gain
+  (+15 to +18 on the mean) is far outside both spreads. (2) On CE backbones the learners are within ~1.2 pts of each
+  other (CL2N ≥ euclid, 8-bit ≈ float), the opposite order to the cosine backbones. (3) The CE s2 history also has a
+  training-loss jump at epoch 18 (0.34 → 0.53, lr 1e-3) that it recovers from within one epoch, so spikes are not
+  specific to the cosine loss; the cosine runs are just less able to recover from them.
+- Decision: no change; the reference row for the backbone comparison is now 3 seeds. Next is
+  `cos_1024_amp_clip` (fold 0, seeds 0-2), queued on Colab after this run.
