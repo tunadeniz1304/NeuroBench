@@ -179,3 +179,34 @@
   the spread is fixed by where each run is when the LR is cut.
 - Next: `configs/exp/cos_1024_amp_coslr.yaml` — same recipe, cosine LR schedule + 2 warm-up epochs (one change).
   Run the bad seed (1) first, then 0 and 2. Accept if seed std drops to ~1-2 pts without lowering the mean.
+
+## 2026-09-30 16:20 UTC — Phase 4: cosine LR schedule (coslr) rejected; loss spikes are the instability
+- `configs/exp/cos_1024_amp_coslr.yaml` (cosine LR + 2 warm-up epochs; only change vs `cos_1024_amp`), fold 0,
+  seeds 0-2, 5 protocol seeds each (`results/pseudo_eval.jsonl`). Session avg, %:
+  | learner | coslr s0 | coslr s1 | coslr s2 | coslr mean ± std | step (cos_1024_amp) mean ± std |
+  |---|---|---|---|---|---|
+  | euclid | 53.12 | 77.28 | 77.22 | 69.21 ± 13.93 | 78.00 ± 5.24 |
+  | float CL2N | 53.38 | 76.79 | 76.81 | 68.99 ± 13.52 | 77.50 ± 5.08 |
+  | Hebbian CL2N 8-bit | 51.09 | 75.25 | 75.40 | 67.25 ± 13.99 | 76.51 ± 5.66 |
+  | Hebbian CL2N 4-bit | 51.04 | 75.23 | 75.36 | 67.21 ± 14.00 | 76.42 ± 5.68 |
+  | centre only, 8-bit | 32.04 | 66.30 | 67.49 | 55.28 ± 20.14 | — |
+  | L2 only, 8-bit | 24.72 | 57.44 | 11.80 | 31.32 ± 23.52 | — |
+  Trained cosine-readout val: coslr 76.05 / 88.95 / 88.58 (step: 91.73 / 85.62 / 90.77).
+- Reading: (1) coslr is worse on the mean (−8.8 euclid) and the spread grows (std 13.9 vs 5.2). The bad seed moved
+  (step: s1; coslr: s0) instead of disappearing. Even the two good coslr seeds (77.3, 77.2) stay below the two
+  good step seeds (83.1, 80.1), with lower readout val. (2) Correction of the 03:00 diagnosis ("no loss spikes"):
+  the coslr histories do show them. s0: train loss 1.50 → 1.84 → 2.83 at epochs 8-10 (lr ≈ 9.4e-4), val back to
+  0.46; it never recovered (final train loss 0.96 vs 0.43-0.48 for s1/s2). s1 has smaller jumps at epochs 10, 21,
+  26 that it recovers from; s2 one small jump at 21. The seed outcome is set by how large the early high-lr spike
+  is, and the cosine schedule keeps lr ≥ 5e-4 until epoch ~26, i.e. longer exposure than the step drop at 20.
+  None of the configs clips gradients. (3) Learner ordering unchanged on all 3 seeds: euclid ≈ float CL2N > 8-bit
+  (1.8-2.0 pts); 4-bit = 8-bit. (4) Open anomaly: in all three runs the train loss rises over the last 3-6 epochs
+  while lr < 1e-5 (s0 0.955 → 1.030, s1 0.432 → 0.459, s2 0.464 → 0.482) and val drops 0.5-0.6 pts from epoch 45
+  to 50. With lr that small the parameters should barely move; cause unknown (to check with the new gradient logs).
+- Decisions: (a) coslr rejected; `cos_1024_amp` (step) stays the backbone recipe. (b) Next: the same step recipe
+  with relative spike clipping (`configs/exp/cos_1024_amp_clip.yaml`, `train.grad_clip_rel: 2.0`, one change),
+  fold 0 seeds 0-2. The earlier `cos_1024_amp_coslr_clip.yaml` (clip on top of coslr) was never run and is
+  replaced by it. Per-epoch `gnorm_mean/max`, `nonfinite_steps`, `clipped_steps` are now logged, which separates
+  gradient explosion from fp16 overflow. Accept if seed std drops to ~1-2 pts without lowering the mean (78.0).
+- Baseline backbone seed 2 (`rsnn_baseline_train_amp`) restarted from epoch 1 at 16:13 (its interrupted run
+  predates the resume feature); results pending.
