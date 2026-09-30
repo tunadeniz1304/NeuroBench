@@ -24,10 +24,13 @@ class _Crash(Exception):
     pass
 
 
-@pytest.mark.parametrize("loss", [{"name": "ce"}, {"name": "cosine", "scale": 16, "center": True}])
-def test_resume_is_bit_identical(tmp_path, monkeypatch, loss):
+@pytest.mark.parametrize("loss,extra", [({"name": "ce"}, {}),
+                                        ({"name": "cosine", "scale": 16, "center": True}, {}),
+                                        ({"name": "cosine", "scale": 16, "center": True}, {"grad_clip_rel": 1.2})])
+def test_resume_is_bit_identical(tmp_path, monkeypatch, loss, extra):
     monkeypatch.setattr(tr, "load_cache", _fake_cache)
     cfg, dev = _cfg(loss), torch.device("cpu")
+    cfg["train"].update(extra)
 
     full = str(tmp_path / "full.pt")
     hist_full = tr.train(cfg, 3, None, full, dev, use_graph=False)

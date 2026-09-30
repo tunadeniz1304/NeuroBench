@@ -81,6 +81,8 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
     sy = torch.zeros(B, dtype=torch.long, device=device)
 
     amp = tcfg.get("amp", False)
+    clip_rel = tcfg.get("grad_clip_rel")
+    gn_ema = torch.zeros((), device=device)   # EMA of accepted gradient norms (grad_clip_rel)
 
     def step():
         opt.zero_grad(set_to_none=False)
@@ -90,14 +92,26 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
         with torch.autocast("cuda", dtype=torch.float16, enabled=amp):
             loss = loss_fn(model, xb, sy)
         loss.backward()
+        grads = [p.grad for p in params if p.grad is not None]
+        nonfinite = torch.stack([(~torch.isfinite(g)).any() for g in grads]).any().float()
         if amp:
-            for p in params:
-                if p.grad is not None:
-                    torch.nan_to_num_(p.grad, nan=0.0, posinf=0.0, neginf=0.0)
+            for g in grads:
+                torch.nan_to_num_(g, nan=0.0, posinf=0.0, neginf=0.0)
+        gnorm = torch.linalg.vector_norm(torch.stack([torch.linalg.vector_norm(g) for g in grads]))
+        clipped = torch.zeros((), device=gnorm.device)
+        if clip_rel:
+            # Spike clipping, scale-free: the norm is capped at clip_rel x the EMA of recent (capped) norms.
+            # Adam is invariant to a constant gradient scale, so only steps far above the recent level change.
+            thr = torch.where(gn_ema > 0, clip_rel * gn_ema, gnorm)     # the first step only seeds the EMA
+            coef = (thr / (gnorm + 1e-6)).clamp(max=1.0)
+            for g in grads:
+                g.mul_(coef)
+            clipped = (coef < 1).float()
+            gn_ema.copy_(torch.where(gn_ema > 0, 0.99 * gn_ema + 0.01 * torch.minimum(gnorm, thr), gnorm))
         if tcfg.get("grad_clip"):
             torch.nn.utils.clip_grad_norm_(params, tcfg["grad_clip"])
         opt.step()
-        return loss
+        return loss, gnorm, nonfinite, clipped
 
     def load_batch(idx):
         sx.copy_(X[idx].float())
@@ -114,7 +128,7 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
         torch.cuda.current_stream().wait_stream(warm)
         graph = torch.cuda.CUDAGraph()
         with torch.cuda.graph(graph):
-            static_loss = step()
+            static_out = step()
 
     # Resume after a runtime reset. Restored only after graph capture, and in place, so the captured graph keeps
     # pointing at the same parameter / optimizer tensors (the warm-up steps above are overwritten).
@@ -122,24 +136,32 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
     history, start = [], 0
     state = load_resume(resume_path, cfg, seed, fold)
     if state is not None:
-        restore_state(state, model, loss_fn, opt, params, lr_t)
+        restore_state(state, model, loss_fn, opt, params, lr_t, gn_ema)
         history, start = state["history"], state["epoch"]
         print(json.dumps({"resumed_from_epoch": start}), flush=True)
 
     for ep in range(start, epochs):
         model.train()
-        t0, tot = time.time(), torch.zeros((), device=device)
+        t0 = time.time()
+        tot, gsum, gmax, nbad, nclip = (torch.zeros((), device=device) for _ in range(5))
         perm = torch.randperm(len(X), device=device)
         for k in range(steps_per_epoch):
             lr_t.fill_(lr_at(tcfg, ep + k / steps_per_epoch))
             load_batch(perm[k * B:(k + 1) * B])
             if use_graph:
                 graph.replay()
-                tot += static_loss.detach()
+                loss, gn, bad, clp = static_out
             else:
-                tot += step().detach()
+                loss, gn, bad, clp = step()
+            tot += loss.detach()
+            gsum += gn
+            gmax = torch.maximum(gmax, gn)
+            nbad += bad
+            nclip += clp
+        # gnorm_*: total gradient norm after zeroing non-finite entries, before clipping
         rec = {"epoch": ep + 1, "loss": tot.item() / steps_per_epoch, "sec": round(time.time() - t0, 1),
-               "lr": float(lr_t)}
+               "lr": float(lr_t), "gnorm_mean": gsum.item() / steps_per_epoch, "gnorm_max": gmax.item(),
+               "nonfinite_steps": int(nbad.item()), "clipped_steps": int(nclip.item())}
         if (ep + 1) % tcfg.get("eval_every", 5) == 0 or ep + 1 == epochs:
             rec["val_acc"] = evaluate(model, xva, yva, classes, device,
                                       logits=lambda xb: loss_fn.logits(model, xb))
@@ -147,7 +169,7 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
         print(json.dumps(rec), flush=True)
         torch.save({"model": model.state_dict(), "cfg": cfg, "seed": seed, "fold": fold,
                     "epoch": ep + 1, "history": history}, out_path)
-        save_resume(resume_path, cfg, seed, fold, ep + 1, history, model, loss_fn, opt)
+        save_resume(resume_path, cfg, seed, fold, ep + 1, history, model, loss_fn, opt, gn_ema)
     if os.path.exists(resume_path):
         os.remove(resume_path)
     return history
@@ -158,12 +180,12 @@ def rng_state():
             "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None}
 
 
-def save_resume(path, cfg, seed, fold, epoch, history, model, loss_fn, opt):
+def save_resume(path, cfg, seed, fold, epoch, history, model, loss_fn, opt, gn_ema=None):
     """Full training state after `epoch`, written atomically next to the checkpoint."""
     tmp = path + ".tmp"
     torch.save({"cfg": cfg, "seed": seed, "fold": fold, "epoch": epoch, "history": history,
                 "model": model.state_dict(), "loss": loss_fn.state_dict(), "opt": opt.state_dict(),
-                "rng": rng_state()}, tmp)
+                "gn_ema": None if gn_ema is None else gn_ema.detach().cpu(), "rng": rng_state()}, tmp)
     os.replace(tmp, path)
 
 
@@ -177,9 +199,11 @@ def load_resume(path, cfg, seed, fold):
     return state
 
 
-def restore_state(state, model, loss_fn, opt, params, lr_t):
+def restore_state(state, model, loss_fn, opt, params, lr_t, gn_ema):
     model.load_state_dict(state["model"])        # copies into the existing tensors
     loss_fn.load_state_dict(state["loss"])
+    if state.get("gn_ema") is not None:          # resume files written before grad_clip_rel have none
+        gn_ema.copy_(state["gn_ema"])
     saved = state["opt"]["state"]
     if all(opt.state.get(p) for i, p in enumerate(params) if i in saved):
         for i, p in enumerate(params):           # graph path: optimizer state exists after warm-up
