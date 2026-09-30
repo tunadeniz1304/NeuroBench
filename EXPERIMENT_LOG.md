@@ -148,3 +148,26 @@
 - Decision: idea 3 adopted as the backbone recipe. Queue reordered: cosine seeds 1-2 first (confirm the gain and
   the learner ordering), then baseline seeds 1-2. If euclid stays ahead, add an integer three-factor variant of
   the Euclidean prototype rule (w = mean count, b = -|w|²/2) with a bit-exact HW model.
+
+## 2026-09-30 02:00 UTC — Phase 4: cosine pretraining over 3 seeds — gain holds, but training is unstable
+- Runtime reset during baseline seed 2 (epoch ~15); cos seeds 1-2 and baseline seed 1 finished before it.
+  Their pseudo evals were recomputed from the Drive checkpoints (deterministic).
+- Session avg (fold 0, 5 protocol seeds each), %:
+  | learner | cos s0 | cos s1 | cos s2 | cos mean ± std | baseline s0, s1 | baseline mean |
+  |---|---|---|---|---|---|---|
+  | euclid | 83.07 | 70.78 | 80.14 | 78.00 ± 5.24 | 60.04, 61.86 | 60.95 |
+  | float CL2N | 82.61 | 70.57 | 79.32 | 77.50 ± 5.08 | 61.27, 62.16 | 61.72 |
+  | Hebbian CL2N 8-bit | 81.90 | 68.70 | 78.94 | 76.51 ± 5.66 | 60.68, 63.20 | 61.94 |
+  | Hebbian CL2N 4-bit | 81.87 | 68.59 | 78.81 | 76.42 ± 5.68 | 60.47, 63.12 | 61.80 |
+  Trained cosine-readout val: s0 91.73, s1 85.62, s2 90.77 (CE baseline: 92.23, 92.08).
+- Reading: (1) Cosine pretraining gain is real (+14.6 to +17.1 on the mean; even the worst cosine seed beats
+  every baseline seed by ≥5.5 pts). (2) But seed-to-seed std is ~5 pts vs ~1 pt for CE: the recipe is unstable;
+  seed 1 also has a weak trained readout (85.6%), so the backbone itself trained worse, not the learner.
+  Suspects: fp16 autocast with silently zeroed non-finite gradients (train.amp), no LR warmup at lr 1e-3,
+  EMA centre updated inside the loss. (3) Learner ordering is consistent across all 3 cosine seeds:
+  euclid > float CL2N > Hebbian 8-bit (euclid − 8-bit: 1.17 / 2.08 / 1.20). On the CE backbone the order flips
+  (8-bit ≥ euclid). 4-bit = 8-bit within 0.1.
+- Decisions: (a) stabilise cosine training before anything else: inspect per-epoch histories of the three
+  cosine checkpoints, then test fp32 (no amp) and LR warmup on the pseudo protocol; (b) add an integer
+  three-factor Euclidean prototype rule (with bit-exact HW model) since float euclid is consistently ahead of
+  CL2N on cosine backbones; (c) add mid-run resume to training so a runtime reset costs ≤1 epoch.
