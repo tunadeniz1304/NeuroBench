@@ -116,8 +116,17 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
         with torch.cuda.graph(graph):
             static_loss = step()
 
-    history = []
-    for ep in range(epochs):
+    # Resume after a runtime reset. Restored only after graph capture, and in place, so the captured graph keeps
+    # pointing at the same parameter / optimizer tensors (the warm-up steps above are overwritten).
+    resume_path = out_path + ".resume"
+    history, start = [], 0
+    state = load_resume(resume_path, cfg, seed, fold)
+    if state is not None:
+        restore_state(state, model, loss_fn, opt, params, lr_t)
+        history, start = state["history"], state["epoch"]
+        print(json.dumps({"resumed_from_epoch": start}), flush=True)
+
+    for ep in range(start, epochs):
         model.train()
         t0, tot = time.time(), torch.zeros((), device=device)
         perm = torch.randperm(len(X), device=device)
@@ -138,7 +147,53 @@ def train(cfg, seed, fold, out_path, device, use_graph=True):
         print(json.dumps(rec), flush=True)
         torch.save({"model": model.state_dict(), "cfg": cfg, "seed": seed, "fold": fold,
                     "epoch": ep + 1, "history": history}, out_path)
+        save_resume(resume_path, cfg, seed, fold, ep + 1, history, model, loss_fn, opt)
+    if os.path.exists(resume_path):
+        os.remove(resume_path)
     return history
+
+
+def rng_state():
+    return {"torch": torch.get_rng_state(), "numpy": np.random.get_state(),
+            "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None}
+
+
+def save_resume(path, cfg, seed, fold, epoch, history, model, loss_fn, opt):
+    """Full training state after `epoch`, written atomically next to the checkpoint."""
+    tmp = path + ".tmp"
+    torch.save({"cfg": cfg, "seed": seed, "fold": fold, "epoch": epoch, "history": history,
+                "model": model.state_dict(), "loss": loss_fn.state_dict(), "opt": opt.state_dict(),
+                "rng": rng_state()}, tmp)
+    os.replace(tmp, path)
+
+
+def load_resume(path, cfg, seed, fold):
+    if not os.path.exists(path):
+        return None
+    state = torch.load(path, map_location="cpu", weights_only=False)
+    if (state["cfg"], state["seed"], state["fold"]) != (cfg, seed, fold):
+        print(json.dumps({"resume_ignored": path, "reason": "different cfg/seed/fold"}), flush=True)
+        return None
+    return state
+
+
+def restore_state(state, model, loss_fn, opt, params, lr_t):
+    model.load_state_dict(state["model"])        # copies into the existing tensors
+    loss_fn.load_state_dict(state["loss"])
+    saved = state["opt"]["state"]
+    if all(opt.state.get(p) for i, p in enumerate(params) if i in saved):
+        for i, p in enumerate(params):           # graph path: optimizer state exists after warm-up
+            for k, v in saved.get(i, {}).items():
+                opt.state[p][k].copy_(v)
+    else:
+        opt.load_state_dict(state["opt"])
+        for g in opt.param_groups:               # keep the shared LR tensor driven by lr_at()
+            g["lr"] = lr_t
+    rng = state["rng"]
+    torch.set_rng_state(rng["torch"])
+    np.random.set_state(rng["numpy"])
+    if rng["cuda"] is not None and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(rng["cuda"])
 
 
 def main():

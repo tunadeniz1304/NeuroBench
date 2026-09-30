@@ -3,7 +3,8 @@
 # Usage: bash scripts/colab_queue.sh <config.yaml>:<fold>:<seed> [...]
 # Checkpoints, logs and pseudo-eval results go to $CKPT_DIR (Drive by default). A checkpoint that reached its
 # last epoch is not retrained; a checkpoint whose results are already in $CKPT_DIR/pseudo_eval.jsonl is not
-# re-evaluated. Re-running the same command after a reset therefore continues where it stopped.
+# re-evaluated, and an interrupted training resumes from its last finished epoch (nbfscil.train keeps a
+# <ckpt>.resume file). Re-running the same command after a reset therefore continues where it stopped.
 # DRY=1 only prints what would run.
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 CK="${CKPT_DIR:-/content/drive/MyDrive/nbfscil_ckpts}"
