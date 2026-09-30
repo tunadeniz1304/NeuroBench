@@ -1,0 +1,6 @@
+# configs/exp/cos_1024_amp.yaml with a cosine LR schedule and 2 warm-up epochs instead of the step drop at 20.
+# Motivation: cosine-loss training converges slower than CE; with the step drop the run is frozen at whatever it
+# reached by epoch 20 (val 83-89% across seeds), which explains most of the seed-to-seed spread.
+model: {name: rsnn, layer_sizes: [1024, 1024], dropout: 0.1, init_state: zeros}
+loss: {name: cosine, scale: 16, margin: 0.0, center: true}
+train: {lr: 0.001, weight_decay: 0.0001, epochs: 50, schedule: cosine, warmup_epochs: 2, batch_size: 256, eval_every: 5, amp: true}

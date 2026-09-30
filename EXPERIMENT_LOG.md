@@ -171,3 +171,11 @@
   cosine checkpoints, then test fp32 (no amp) and LR warmup on the pseudo protocol; (b) add an integer
   three-factor Euclidean prototype rule (with bit-exact HW model) since float euclid is consistently ahead of
   CL2N on cosine backbones; (c) add mid-run resume to training so a runtime reset costs ≤1 epoch.
+
+## 2026-09-30 03:00 UTC — Diagnosis of cosine-training instability
+- Per-epoch histories (fold 0): no loss spikes or NaN-like jumps → fp16 is not the primary suspect.
+  Cosine-loss runs converge much slower than CE (val@5: 0.58 / 0.36 / 0.44 vs CE 0.69). At the step LR drop
+  (epoch 20) the seeds sit at 0.89 / 0.83 / 0.88 and barely move afterwards (final 0.917 / 0.856 / 0.908):
+  the spread is fixed by where each run is when the LR is cut.
+- Next: `configs/exp/cos_1024_amp_coslr.yaml` — same recipe, cosine LR schedule + 2 warm-up epochs (one change).
+  Run the bad seed (1) first, then 0 and 2. Accept if seed std drops to ~1-2 pts without lowering the mean.
