@@ -1,8 +1,11 @@
-# configs/exp/cos_1024_amp_coslr.yaml with relative (spike) gradient clipping; this is the only change.
+# configs/exp/cos_1024_amp.yaml (step LR, the adopted cosine-pretraining recipe) with relative (spike) gradient
+# clipping; this is the only change. The cosine-LR variant (cos_1024_amp_coslr) was rejected on 3 seeds.
 # Motivation: in coslr fold 0 seed 0 the training loss jumped 1.50 -> 2.83 at epochs 9-10 (lr ~9.4e-4) and the run
-# never recovered (final loss 0.96 vs 0.43 for seed 1, val 76.1 vs 89.0); seed 1 shows smaller jumps at epochs 10,
-# 21 and 26. The config has no gradient clipping. A fixed threshold is scale-dependent (Adam ignores a constant
-# gradient scale, and the norm scale is unknown), so the norm is capped at 2x the EMA of recent norms instead.
+# never recovered (val 76.1); seeds 1-2 show smaller jumps at epochs 10, 21, 26. The step recipe also spreads by
+# seed (val 91.7 / 85.6 / 90.8), and the per-epoch history is too coarse to rule out the same cause. No config has
+# gradient clipping. A fixed threshold is scale-dependent (Adam ignores a constant gradient scale, and the norm
+# scale is unknown), so the norm is capped at 2x the EMA of recent norms instead; the new per-epoch gnorm_* and
+# clipped_steps fields show how often it acts.
 model: {name: rsnn, layer_sizes: [1024, 1024], dropout: 0.1, init_state: zeros}
 loss: {name: cosine, scale: 16, margin: 0.0, center: true}
-train: {lr: 0.001, weight_decay: 0.0001, epochs: 50, schedule: cosine, warmup_epochs: 2, batch_size: 256, eval_every: 5, amp: true, grad_clip_rel: 2.0}
+train: {lr: 0.001, weight_decay: 0.0001, epochs: 50, schedule: step, step_size: 20, batch_size: 256, eval_every: 5, amp: true, grad_clip_rel: 2.0}
