@@ -1,5 +1,8 @@
 # Leaderboard submission steps (done by the repo owner)
 
+Status: submitted on 2026-10-01 as [NeuroBench/neurobench#279](https://github.com/NeuroBench/neurobench/pull/279)
+(fork `tunadeniz1304/neurobench-1`, branch `keyword-fscil-snn-cl2n`, base `dev`).
+
 Nothing here is sent automatically. Numbers: official run 2/5 in `results/official_runs.jsonl`.
 
 ## 1. Checkpoints

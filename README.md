@@ -252,7 +252,7 @@ The full pipeline is driven by [`reproduce.sh`](reproduce.sh):
 - [x] Final backbone training recipe (Phase 4)
 - [x] Official evaluation of the final configuration (official run 2/5)
 - [x] Technical report (tag `v1-final`)
-- [ ] Leaderboard submission (drafts: [`PR_DRAFT.md`](PR_DRAFT.md), [`LEADERBOARD_ROW.md`](LEADERBOARD_ROW.md))
+- [x] Leaderboard submission: [NeuroBench/neurobench#279](https://github.com/NeuroBench/neurobench/pull/279) (under review)
 
 ## Citation
 

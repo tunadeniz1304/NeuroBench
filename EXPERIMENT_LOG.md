@@ -361,3 +361,10 @@
 - Connection sparsity 0.049 (vs 0.0199 for the baseline rerun) traced to the 100 zero novel-class readout rows
   at session 0 (100 × 1024 / 3,387,596 parameters ≈ 0.030).
 - Tag `v1-final`. Upstream PR / leaderboard submission left to the repo owner. Official budget: 2/5 used.
+
+## 2026-10-01 17:30 UTC — submission
+- Repository made public by the owner; release `v1-final` with the three final backbones
+  (hashes in `results/checkpoints.sha256`, re-downloaded from the release and verified).
+- Leaderboard PR opened by the owner: https://github.com/NeuroBench/neurobench/pull/279 (base `dev`, one file,
+  `leaderboard.rst` +2 lines, row dated 2026-10-01). It asks the maintainers to confirm the Dense / Eff_ACs unit
+  convention. `CLAUDE.md` / `.claude/` are no longer tracked (kept locally).
