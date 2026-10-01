@@ -171,6 +171,15 @@ refuses any other split and does not count as an official run.
 
 ### Reproduce the official result
 
+The three final backbones (13.6 MB each) are attached to the
+[`v1-final` release](https://github.com/tunadeniz1304/NeuroBench/releases/tag/v1-final). To evaluate without
+retraining, download them into `$CKPT_DIR`, check them against
+[`results/checkpoints.sha256`](results/checkpoints.sha256) and skip `./reproduce.sh final`:
+
+```bash
+(cd $CKPT_DIR && sha256sum -c /path/to/NeuroBench/results/checkpoints.sha256)
+```
+
 ```bash
 ./reproduce.sh final                       # backbones -> $CKPT_DIR/cos_1024_amp_clip_s{0,1,2}.pt
 CONFIRM_OFFICIAL=1 ./reproduce.sh official # configs/final/clip_cl2n_8bit.yaml, seeds 0 1 2
