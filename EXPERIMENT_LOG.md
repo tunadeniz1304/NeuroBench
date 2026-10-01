@@ -254,3 +254,27 @@
   flat (±0.1). Not acted on.
 - Decision: `cos_1024_amp_clip` is the backbone recipe. Next: fold 1 confirmation (clip recipe + CE reference,
   3 seeds each) before the final 100-class training.
+
+## 2026-10-01 11:45 UTC — Phase 4: clip recipe confirmed on fold 1 (3 seeds)
+- `configs/exp/cos_1024_amp_clip.yaml`, fold 1, seeds 0-2. s0 started on an L4, was resumed at epoch 2 on an A100
+  (24.6 s/epoch vs ~215 s on the L4 runtime used for fold 0); s1, s2 ran entirely on the A100. Trained
+  cosine-readout val 95.67 / 95.70 / 95.97. Session avg over 5 protocol seeds each, %:
+  | learner | s0 | s1 | s2 | fold 1 mean ± std | fold 0 mean ± std |
+  |---|---|---|---|---|---|
+  | euclid | 84.99 | 84.37 | 85.39 | 84.91 ± 0.51 | 86.43 ± 1.15 |
+  | float CL2N | 84.08 | 83.78 | 84.49 | 84.12 ± 0.36 | 85.84 ± 1.18 |
+  | Hebbian CL2N 8-bit | 83.84 | 83.46 | 84.30 | 83.87 ± 0.42 | 85.24 ± 1.51 |
+  | Hebbian CL2N 4-bit | 83.79 | 83.39 | 84.28 | 83.82 ± 0.45 | 85.20 ± 1.51 |
+  | centre only, 8-bit | 79.35 | 77.89 | 79.50 | 78.91 ± 0.89 | 79.70 ± 1.62 |
+  | L2 only, 8-bit | 7.64 | 4.96 | 7.40 | 6.67 ± 1.48 | 13.52 ± 1.05 |
+  Mean base / novel accuracy (euclid): 94.29 / 56.92 (fold 0: 90.82 / 74.32).
+- Reading: (1) The recipe transfers: seed std 0.4-0.5, no loss jumps, no seed below 83.4 on any learner except the
+  ablations. (2) The fold-1 mean is 1.4-1.7 pts lower than fold 0, entirely from novel classes (−17 pts) while
+  base is +3.5: the fold-1 held-out classes are harder to separate as 5-shot novel classes than the fold-0 ones.
+  This is a property of the split, not of the recipe; there is no fold-1 CE reference yet to measure the recipe
+  gain on this split. (3) Learner ordering is identical on both folds: euclid > float CL2N (0.8) > Hebbian 8-bit
+  (0.25) = 4-bit; the integer learner costs 1.0 pt vs euclid here (1.2 on fold 0). (4) GPU change (L4 → A100)
+  mid-run for s0 only; s0 sits inside the s1-s2 range, so no visible effect.
+- Decision: `cos_1024_amp_clip` is confirmed as the backbone recipe on two folds. A fold-1 CE reference is optional
+  (the CE-vs-cosine gap on fold 0 is 25 pts, far beyond fold-to-fold variation). Next: final 100-class backbone
+  training with this recipe (3 seeds), then Eff_ACs and the official eval.
