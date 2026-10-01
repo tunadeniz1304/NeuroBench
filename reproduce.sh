@@ -12,7 +12,7 @@
 #
 # Hardware used for the reported numbers: 1x Tesla T4 (15 GB), 2 CPU cores, Python 3.13, CUDA 12.8 wheels.
 # `official` is never part of a default run: every invocation of nbfscil.official_eval is one of at most
-# five official runs (CLAUDE.md) and is appended to results/official_runs.jsonl. It only executes with
+# five official runs (EXPERIMENT_LOG.md) and is appended to results/official_runs.jsonl. It only executes with
 # CONFIRM_OFFICIAL=1 set explicitly.
 set -euo pipefail
 

@@ -6,7 +6,7 @@ do not alter the task: (1) inputs come from the S2S cache instead of being re-en
 (2) everything is seeded, (3) several repeats (seeds) are run and aggregated.
 
 Every invocation is one OFFICIAL EVAL RUN and is appended to results/official_runs.jsonl.
-Budget: at most 5 official runs in total (see CLAUDE.md).
+Budget: at most 5 official runs in total (see EXPERIMENT_LOG.md).
 
 Usage: python -m nbfscil.official_eval --config configs/<name>.yaml --seeds 0 1 2
 """
