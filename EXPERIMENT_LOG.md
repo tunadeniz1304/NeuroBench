@@ -367,4 +367,4 @@
   (hashes in `results/checkpoints.sha256`, re-downloaded from the release and verified).
 - Leaderboard PR opened by the owner: https://github.com/NeuroBench/neurobench/pull/279 (base `dev`, one file,
   `leaderboard.rst` +2 lines, row dated 2026-10-01). It asks the maintainers to confirm the Dense / Eff_ACs unit
-  convention. `CLAUDE.md` / `.claude/` are no longer tracked (kept locally).
+  convention.
