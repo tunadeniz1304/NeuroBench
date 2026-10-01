@@ -8,7 +8,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](requirements.txt)
 [![PyTorch 2.11](https://img.shields.io/badge/PyTorch-2.11-ee4c2c.svg)](requirements.txt)
 [![NeuroBench 2.3.0](https://img.shields.io/badge/NeuroBench-2.3.0-6f42c1.svg)](https://github.com/NeuroBench/neurobench)
-[![Status: WIP](https://img.shields.io/badge/status-work%20in%20progress-orange.svg)](EXPERIMENT_LOG.md)
+[![Session avg 86.93%](https://img.shields.io/badge/session%20avg-86.93%25-brightgreen.svg)](results/official_runs.jsonl)
 
 [Overview](#overview) •
 [Results](#results) •
@@ -34,8 +34,10 @@ The goal is to beat the published SNN result with a spiking network whose increm
 built as a small digital neuromorphic RTL block.
 
 > [!NOTE]
-> **Work in progress.** No result in this repository is final yet. Progress and every run are
-> recorded in [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md).
+> **Result.** On the official harness the final system reaches **86.93 ± 0.40%** session average
+> (published SNN: 75.27%; our rerun of it: 76.09 ± 0.36%) with unchanged parameter footprint and 3.8% fewer
+> effective synaptic operations on average. Every run is recorded in [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md);
+> the write-up is in [`report.md`](report.md).
 
 ### Key features
 
@@ -57,12 +59,16 @@ built as a small digital neuromorphic RTL block.
 | M5 ANN (leaderboard) | 97.09% | 89.27% | 6.03E6 | 0.783 | 2.59E7 | 0 (7.85E6 MACs) | `leaderboard.rst` |
 | SNN (leaderboard) | 93.48% | 75.27% | 1.36E7 | 0.916 | 3.39E6 | 3.65E5 | `leaderboard.rst` |
 | SNN baseline, our rerun (official run 1/5) | 84.21 ± 0.06% ¹ | 76.09 ± 0.36% | 1.36E7 | 0.917 | 6.74E8 ² | 7.12E7 ² | [`results/official_runs.jsonl`](results/official_runs.jsonl) |
-| **Ours** | TODO | TODO | TODO | TODO | TODO | TODO | TODO |
+| **Ours (official run 2/5)** | **93.48 ± 0.26%** ¹ | **86.93 ± 0.40%** | 1.36E7 ³ | 0.900 | 6.74E8 ² | 6.77E7 ² | [`results/official_runs.jsonl`](results/official_runs.jsonl) |
 
 ¹ Measured with the prototype readout, i.e. the readout used in the incremental sessions.<br>
 ² neurobench 2.3.0 counts ops per sample over all T = 200 steps. The leaderboard values are ≈ 200×
 smaller (6.74E8 / 200 = 3.37E6, 7.12E7 / 200 = 3.56E5), so ops are compared only against our rerun
-on the same harness.
+on the same harness. Ops and sparsity are session-0 values; over all sessions our Eff_ACs are 68.50M ± 5.90M
+vs 71.20M (−3.8%), with one of three backbone seeds 7.8% above the baseline (see [`report.md`](report.md) §4.4).<br>
+³ 13,550,384 B of parameters, the same as the baseline, plus 5,124 B of integer learner state.
+
+<p align="center"><img src="docs/figures/pareto.png" width="90%" alt="Accuracy vs. Eff_ACs and footprint"></p>
 
 **Reporting conventions**
 
@@ -83,21 +89,24 @@ on the same harness.
 1. **Backbone.** A RadLIF recurrent SNN with the same architecture as the NeuroBench baseline,
    trained offline on the 100 base classes. The re-implementation in
    [`nbfscil/snn.py`](nbfscil/snn.py) is graph-capturable and matches upstream at the bit level.
-   The final training recipe is TODO (Phase 4).
+   It is trained with a centred cosine classifier (scale 16) on the summed spike counts, so that the
+   representation fits the prototype readout used later, and relative gradient clipping (norm capped at
+   2× its running average) keeps training stable across seeds
+   ([`configs/exp/cos_1024_amp_clip.yaml`](configs/exp/cos_1024_amp_clip.yaml)).
 2. **Incremental learner.** Centered, L2-normalized, k-bit integer class prototypes are learned by a
    three-factor Hebbian rule ([`nbfscil/hebbian.py`](nbfscil/hebbian.py)). Consolidation uses only
    integer add, multiply, integer square root and shift.
 3. **Deployed readout.** The learned `(W, b)` is written into the SNN's sum-over-time readout, so
    the harness measures exactly the computation that would run on hardware.
 
-A detailed description is in [`report.md`](report.md) (draft).
+A detailed description is in [`report.md`](report.md).
 
 ## Installation
 
 **Requirements**
 
 - Python 3.13
-- A CUDA GPU for training (tested on Tesla T4 and NVIDIA L4). Tests that need no data also run on CPU.
+- A CUDA GPU for training (tested on Tesla T4, NVIDIA L4 and A100). Tests that need no data also run on CPU.
 
 **Setup**
 
@@ -146,7 +155,26 @@ To run a sequence of training and evaluation jobs that survives runtime resets (
 [`scripts/colab_queue.sh`](scripts/colab_queue.sh):
 
 ```bash
-bash scripts/colab_queue.sh configs/exp/cos_1024_amp_coslr.yaml:0:0 configs/exp/cos_1024_amp_coslr.yaml:0:1
+bash scripts/colab_queue.sh configs/exp/cos_1024_amp_clip.yaml:0:0 configs/exp/cos_1024_amp_clip.yaml:all:0
+```
+
+A fold of `all` trains a final backbone on all 100 base classes (no pseudo evaluation).
+
+### Check the cost of a system before an official run
+
+```bash
+CKPT_DIR=$NB_DATA/ckpts python -m nbfscil.cost_check     --config configs/baseline_snn.yaml configs/final/clip_cl2n_8bit.yaml --seeds 0 1 2
+```
+
+Runs the harness metrics (footprint, sparsity, synaptic ops) of session 0 on the base validation split; it
+refuses any other split and does not count as an official run.
+
+### Reproduce the official result
+
+```bash
+./reproduce.sh final                       # backbones -> $CKPT_DIR/cos_1024_amp_clip_s{0,1,2}.pt
+CONFIRM_OFFICIAL=1 ./reproduce.sh official # configs/final/clip_cl2n_8bit.yaml, seeds 0 1 2
+python scripts/make_figures.py             # docs/figures/ from results/official_runs.jsonl
 ```
 
 > [!WARNING]
@@ -167,16 +195,17 @@ bash scripts/colab_queue.sh configs/exp/cos_1024_amp_coslr.yaml:0:0 configs/exp/
 │   ├── hebbian.py          # three-factor integer prototype rule
 │   ├── readout.py, learners.py
 │   ├── pseudo_eval.py      # validation protocol (the only protocol used for decisions)
+│   ├── cost_check.py       # harness cost metrics on base_val (no test data)
 │   └── official_eval.py    # official harness evaluation (5-run budget)
 ├── hw_model/               # bit-exact integer reference of the on-chip learning rule
 ├── configs/                # training, system, learner and experiment configs
-├── scripts/                # resumable Colab job queue
-├── tests/                  # equivalence, hardware-model, split and resume tests
+├── scripts/                # resumable Colab job queue, report figures
+├── tests/                  # equivalence, hardware-model, SynOps-count, split and resume tests
 ├── results/                # logged pseudo-protocol and official results
-├── docs/                   # task protocol, literature landscape, idea scoring
+├── docs/                   # task protocol, literature landscape, idea scoring, figures
 ├── reproduce.sh            # end-to-end reproduction script
 ├── EXPERIMENT_LOG.md       # chronological log of every experiment
-└── report.md               # technical report (draft)
+└── report.md               # technical report
 ```
 
 ## Reproducibility
@@ -190,7 +219,7 @@ The full pipeline is driven by [`reproduce.sh`](reproduce.sh):
 | `test` | runs the test suite |
 | `baseline` | trains the upstream SNN recipe on our RSNN (3 seeds) |
 | `pseudo` | trains pseudo-fold backbones and runs the pseudo-incremental protocol |
-| `final` | trains the final backbone(s); needs `FINAL_TRAIN_CFG` (TODO) |
+| `final` | trains the final backbones (`FINAL_TRAIN_CFG`, default `configs/exp/cos_1024_amp_clip.yaml`, seeds 0-2) |
 | `official` | official harness evaluation; requires `CONFIRM_OFFICIAL=1` |
 
 ```bash
@@ -211,9 +240,10 @@ The full pipeline is driven by [`reproduce.sh`](reproduce.sh):
 
 - [x] Reproduce the NeuroBench SNN baseline on the official harness (tag `v0-baseline-repro`)
 - [x] Pseudo-incremental validation protocol and integer prototype learners
-- [ ] Final backbone training recipe (Phase 4)
-- [ ] Official evaluation of the final configuration
-- [ ] Technical report and leaderboard submission (tag `v1-final`)
+- [x] Final backbone training recipe (Phase 4)
+- [x] Official evaluation of the final configuration (official run 2/5)
+- [x] Technical report (tag `v1-final`)
+- [ ] Leaderboard submission (drafts: [`PR_DRAFT.md`](PR_DRAFT.md), [`LEADERBOARD_ROW.md`](LEADERBOARD_ROW.md))
 
 ## Citation
 
