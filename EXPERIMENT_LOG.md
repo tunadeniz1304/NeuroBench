@@ -229,3 +229,28 @@
   specific to the cosine loss; the cosine runs are just less able to recover from them.
 - Decision: no change; the reference row for the backbone comparison is now 3 seeds. Next is
   `cos_1024_amp_clip` (fold 0, seeds 0-2), queued on Colab after this run.
+
+## 2026-10-01 10:00 UTC — Phase 4: relative spike clipping accepted (cos_1024_amp_clip, 3 seeds)
+- `configs/exp/cos_1024_amp_clip.yaml` (= `cos_1024_amp` step recipe + `train.grad_clip_rel: 2.0`), fold 0,
+  seeds 0-2 (s1 resumed at epoch 36 after a Colab runtime reset). Session avg over 5 protocol seeds each, %:
+  | learner | s0 | s1 | s2 | clip mean ± std | step (no clip) mean ± std | Δ mean |
+  |---|---|---|---|---|---|---|
+  | euclid | 86.33 | 85.33 | 87.62 | 86.43 ± 1.15 | 78.00 ± 5.24 | +8.4 |
+  | float CL2N | 85.83 | 84.67 | 87.03 | 85.84 ± 1.18 | 77.50 ± 5.08 | +8.3 |
+  | Hebbian CL2N 8-bit | 85.23 | 83.74 | 86.76 | 85.24 ± 1.51 | 76.51 ± 5.66 | +8.7 |
+  | Hebbian CL2N 4-bit | 85.14 | 83.72 | 86.74 | 85.20 ± 1.51 | 76.42 ± 5.68 | +8.8 |
+  | centre only, 8-bit | 78.81 | 78.72 | 81.57 | 79.70 ± 1.62 | 67.95 ± 9.44 | +11.8 |
+  | L2 only, 8-bit | 13.05 | 14.73 | 12.79 | 13.52 ± 1.05 | 11.33 ± 1.20 | |
+  Mean base / novel accuracy (euclid): 90.82 / 74.32 (step: 83.66 / 61.85). Trained cosine-readout val:
+  93.65 / 93.03 / 93.67 (step: 91.73 / 85.62 / 90.77).
+- Reading: (1) Both acceptance criteria hold: seed std 1.2-1.5 (was 5.1-5.7) and the mean rises by 8-9 pts
+  instead of dropping. Every clip seed beats the best step seed (83.07). The gain is on both sides: base +7, novel
+  +12.5. (2) The clip acts on 2-25 of 117 steps per epoch; `gnorm_max` reaches 10²-10⁴ × `gnorm_mean` (e.g. s2
+  epoch 15: 16.6k vs mean 145), `nonfinite_steps` is 0 everywhere, so these are real gradient explosions, not fp16
+  overflow. No train-loss jumps in any of the three histories. (3) Learner ordering is unchanged: euclid > float
+  CL2N (0.6) > Hebbian 8-bit (0.6) = 4-bit. The integer learner costs 1.2 pts vs euclid. (4) The late-epoch
+  anomaly is much smaller but still present: at lr 1e-5 the train loss drifts up ~1 % (s1 0.2435 → 0.2472,
+  s2 0.2012 → 0.2038), together with isolated large norms (s1 epoch 48: max 767, s2 epoch 49: max 983); val is
+  flat (±0.1). Not acted on.
+- Decision: `cos_1024_amp_clip` is the backbone recipe. Next: fold 1 confirmation (clip recipe + CE reference,
+  3 seeds each) before the final 100-class training.
