@@ -3,8 +3,9 @@
 Nothing here is sent automatically. Numbers: official run 2/5 in `results/official_runs.jsonl`.
 
 ## 1. Checkpoints
-Attach the three final backbones to a GitHub Release of tag `v1-final` in this repository (they are not
-committed to git):
+Done: the three final backbones are attached to the
+[`v1-final` release](https://github.com/tunadeniz1304/NeuroBench/releases/tag/v1-final) (not committed to git);
+the downloaded release assets match these hashes:
 
 | File | Size | SHA256 |
 |---|---|---|

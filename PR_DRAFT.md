@@ -49,8 +49,8 @@ in the table; we would like the maintainers to confirm which convention the tabl
 
 ## Code and reproduction
 - Code: https://github.com/tunadeniz1304/NeuroBench, tag `v1-final`.
-- Checkpoints: three backbones, 13.6 MB each (`cos_1024_amp_clip_s{0,1,2}.pt`); hosting to be decided by the
-  author before submission.
+- Checkpoints: three backbones, 13.6 MB each (`cos_1024_amp_clip_s{0,1,2}.pt`), attached to
+  https://github.com/tunadeniz1304/NeuroBench/releases/tag/v1-final (SHA256 in `results/checkpoints.sha256`).
 - Command: `./reproduce.sh final` then `CONFIRM_OFFICIAL=1 ./reproduce.sh official`
   (`FINAL_SYSTEM_CFG=configs/final/clip_cl2n_8bit.yaml`, the default).
 - Hardware: final backbones trained on 1× NVIDIA A100 (about 25 s per epoch, 50 epochs).
