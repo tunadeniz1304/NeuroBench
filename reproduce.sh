@@ -26,9 +26,11 @@ UPSTREAM_COMMIT="e521c28"
 SEEDS=(0 1 2)
 PSEUDO_FOLDS=(0 1)
 
-# Final configuration. Filled in after the Phase 4 decision on the pseudo protocol.
-FINAL_TRAIN_CFG="${FINAL_TRAIN_CFG:-TODO}"     # e.g. configs/<final_train>.yaml
-FINAL_SYSTEM_CFG="${FINAL_SYSTEM_CFG:-TODO}"   # system: proto, checkpoint: ..., learner: {...}
+# Final configuration (Phase 4 decision on the pseudo protocol, EXPERIMENT_LOG.md 2026-10-01). The system config
+# reads backbone seed s from $CKPT_DIR/<train cfg name>_s<s>.pt for official seed s.
+FINAL_TRAIN_CFG="${FINAL_TRAIN_CFG:-configs/exp/cos_1024_amp_clip.yaml}"
+FINAL_SYSTEM_CFG="${FINAL_SYSTEM_CFG:-configs/final/clip_cl2n_8bit.yaml}"
+export CKPT_DIR
 PSEUDO_TRAIN_CFGS=(${PSEUDO_TRAIN_CFGS:-configs/rsnn_baseline_train.yaml})
 PSEUDO_LEARNERS=(${PSEUDO_LEARNERS:-configs/learners/euclid.yaml configs/learners/float_cl2n.yaml
                  configs/learners/cl2n_8bit.yaml configs/learners/cl2n_4bit.yaml
@@ -98,7 +100,8 @@ stage_final() {
   mkdir -p "$CKPT_DIR" "$LOG_DIR"
   name="$(basename "$FINAL_TRAIN_CFG" .yaml)"
   for s in "${SEEDS[@]}"; do
-    python -m nbfscil.train --config "$FINAL_TRAIN_CFG" --seed "$s" --out "$CKPT_DIR/${name}_s$s.pt" \
+    ck="$CKPT_DIR/${name}_s$s.pt"
+    ckpt_done "$ck" || python -m nbfscil.train --config "$FINAL_TRAIN_CFG" --seed "$s" --out "$ck" \
       | tee "$LOG_DIR/${name}_s$s.log"
   done
 }

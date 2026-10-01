@@ -94,10 +94,20 @@ def git_hash():
         return "unknown"
 
 
+def seed_config(cfg, seed):
+    """Per-seed system config: `checkpoint` may name one backbone per seed via `{seed}` and use environment
+    variables (e.g. `${CKPT_DIR}/final_s{seed}.pt`), so one official run covers backbone seeds and session
+    sampling seeds together."""
+    if "checkpoint" not in cfg:
+        return cfg
+    return {**cfg, "checkpoint": os.path.expandvars(cfg["checkpoint"]).format(seed=seed)}
+
+
 @torch.no_grad()  # the harness does not disable autograd; metrics are unaffected
 def run_seed(cfg, seed, device, base_test, evaluation, base_only=False):
     torch.manual_seed(seed)
     np.random.seed(seed)
+    cfg = seed_config(cfg, seed)
     system = build_system(cfg, device)  # loads backbone, builds harness model + incremental learner
     system.learn_base()                 # base prototypes / readout from base train split only
 
@@ -114,7 +124,8 @@ def run_seed(cfg, seed, device, base_test, evaluation, base_only=False):
     sessions.append(res)
     print(f"[seed {seed}] session 0: {res}", flush=True)
     if base_only:
-        return {"seed": seed, "base_acc": res["ClassificationAccuracy"], "session0": res}
+        return {"seed": seed, "checkpoint": cfg.get("checkpoint"), "base_acc": res["ClassificationAccuracy"],
+                "session0": res}
 
     # forward passes outside bench.run() also fire the harness activation hooks; clear them
     reset_hooks = lambda: bench.workload_metric_manager.reset_hooks(system.harness_model)
@@ -135,6 +146,7 @@ def run_seed(cfg, seed, device, base_test, evaluation, base_only=False):
     accs = [r["ClassificationAccuracy"] for r in sessions]
     return {
         "seed": seed,
+        "checkpoint": cfg.get("checkpoint"),
         "session_accs": accs,
         "base_acc": accs[0],
         "session_avg": float(np.mean(accs)),

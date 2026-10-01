@@ -278,3 +278,19 @@
 - Decision: `cos_1024_amp_clip` is confirmed as the backbone recipe on two folds. A fold-1 CE reference is optional
   (the CE-vs-cosine gap on fold 0 is 25 pts, far beyond fold-to-fold variation). Next: final 100-class backbone
   training with this recipe (3 seeds), then Eff_ACs and the official eval.
+
+## 2026-10-01 11:50 UTC — Phase 4 decision: final configuration
+- Backbone: `configs/exp/cos_1024_amp_clip.yaml` (cosine-classifier pretraining, step LR, relative spike clipping),
+  trained on all 100 base classes (`fold: None`), seeds 0-2 → `$CKPT_DIR/cos_1024_amp_clip_s{0,1,2}.pt`.
+- Learner: integer Hebbian CL2N, 8 bit (`configs/final/clip_cl2n_8bit.yaml`). Reasons, all from the pseudo
+  protocol: (1) win condition 3 needs the integer local rule; euclid (float prototypes) is 1.0-1.2 pts higher but
+  is not the hardware rule, so it is not the submitted system. (2) 8-bit vs 4-bit is a tie on both folds (fold 0
+  85.24 vs 85.20, fold 1 83.87 vs 83.82), but the pseudo protocol has only 60 + 40 classes; the official task has
+  100 + 100, where the coarser 4-bit quantisation has more prototypes to separate and was never tested at that
+  scale. 8 bit is the lower-risk choice; 4 bit stays a documented footprint option.
+- Official eval mapping: `nbfscil.official_eval` now resolves `checkpoint: ${CKPT_DIR}/..._s{seed}.pt` per seed,
+  so official seed s uses backbone seed s and one official run reports mean ± std over 3 backbones × their
+  session sampling. Each run's `checkpoint` is stored in `results/official_runs.jsonl`.
+- `reproduce.sh`: FINAL_TRAIN_CFG / FINAL_SYSTEM_CFG set; `final` skips finished checkpoints.
+- Expected (not measured, for planning only): pseudo results suggest a session avg in the low-to-mid 80s on the
+  official split; the actual value comes only from the official run. Official budget unchanged: 1/5 used.

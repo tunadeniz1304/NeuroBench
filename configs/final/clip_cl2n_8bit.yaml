@@ -1,0 +1,7 @@
+# Final system (Phase 4 decision, EXPERIMENT_LOG.md 2026-10-01): backbone configs/exp/cos_1024_amp_clip.yaml trained
+# on all 100 base classes, one backbone per seed (official seed s uses backbone seed s), with the integer Hebbian
+# CL2N learner at 8 bit (win condition 3). Pseudo protocol, 3 backbone seeds x 5 protocol seeds:
+# fold 0 85.24 +- 1.51, fold 1 83.87 +- 0.42 (euclid float prototypes: +1.0-1.2, not hardware-plausible).
+system: proto
+checkpoint: ${CKPT_DIR}/cos_1024_amp_clip_s{seed}.pt
+learner: {name: hebbian_cl2n, weight_bits: 8, center: true, normalize: true}
