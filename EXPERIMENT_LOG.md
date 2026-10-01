@@ -308,3 +308,21 @@
 - The first cost pre-check numbers for the final system (Eff_ACs 25.8M) are therefore INVALID and not reported;
   the baseline row (upstream module) is unaffected: base_val acc 84.29 ± 0.05, Eff_ACs 71.18M, activation
   sparsity 0.917. Re-run of the pre-check pending.
+
+## 2026-10-01 15:15 UTC — cost pre-check (base_val) after the SynOps fix
+- `nbfscil.cost_check`, base_val, session-0 setup (100 base classes), 3 seeds (final system: backbone seed = seed).
+  Dense now 674,201,600 for both systems (identical connectivity), confirming the fix.
+
+  | system | base_val acc | Eff_ACs | activation sparsity | Footprint (+ learner state) |
+  |---|---|---|---|---|
+  | baseline (upstream RSNN + float protos) | 84.29 ± 0.05 | 71.18M ± 0.001M | 0.917 | 13,550,384 B (+0) |
+  | final (clip backbone + Hebbian CL2N 8 bit) | 93.64 ± 0.40 | 67.67M ± 5.86M | 0.900 ± 0.008 | 13,550,384 B (+5,124) |
+
+  Per seed (final): acc 93.08 / 93.93 / 93.92, Eff_ACs 75.86M / 62.47M / 64.68M, connection sparsity
+  0.051 / 0.048 / 0.048 (baseline 0.020).
+- Reading: on average the final system needs 4.9 % fewer Eff_ACs than the baseline at +9.4 pts base_val accuracy,
+  but backbone seed 0 is 6.6 % above the baseline; the spread comes from the backbone's firing rate, not from the
+  learner. Footprint is equal in parameters; the integer learner keeps 5,124 B of extra state (+0.04 %), reported
+  separately. Win condition 2 is therefore met on the mean but not for every seed; the report shows the per-seed
+  points on the accuracy-vs-Eff_ACs Pareto plot instead of only the mean. No change to the system (no tuning on
+  cost after seeing these numbers); proceed to the official run with the Phase 4 configuration.
