@@ -79,11 +79,12 @@ class RadLIFLayer(nn.Module):
         b = torch.clamp(self.b, *self.b_lim)
         with torch.no_grad():
             self.V.weight.fill_diagonal_(0.0)
-        V = self.V.weight
         s = []
         for t in range(T):
             wt = beta * wt + a * ut + b * st
-            ut = alpha * (ut - st) + (1 - alpha) * (Wx[:, t, :] + st @ V.t() - wt)
+            # module call (not st @ V.weight.t()) as upstream: the harness counts SynOps through Linear hooks,
+            # so a functional matmul would leave the recurrent synapses out of Dense / Eff_ACs
+            ut = alpha * (ut - st) + (1 - alpha) * (Wx[:, t, :] + self.V(st) - wt)
             st = spike_fct(ut - self.threshold)
             s.append(st)
         return torch.stack(s, dim=1)

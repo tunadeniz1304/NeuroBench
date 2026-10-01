@@ -294,3 +294,17 @@
 - `reproduce.sh`: FINAL_TRAIN_CFG / FINAL_SYSTEM_CFG set; `final` skips finished checkpoints.
 - Expected (not measured, for planning only): pseudo results suggest a session avg in the low-to-mid 80s on the
   official split; the actual value comes only from the official run. Official budget unchanged: 1/5 used.
+
+## 2026-10-01 14:30 UTC — final backbones trained; smoke OK; SynOps counting bug found
+- Final backbones `cos_1024_amp_clip_s{0,1,2}.pt` (all 100 base classes, A100): 50/50 epochs, last val
+  94.81 / 95.63 / 95.62. Official-eval smoke (`--smoke`, random spikes, no test data): pipeline OK for 3 seeds.
+- Cost pre-check (`nbfscil.cost_check`, base_val only, harness Benchmark as in session 0) first gave for the final
+  system Dense 254,771,200 vs 674,201,600 for the baseline, although both backbones have the same weights shape
+  (Footprint 13,550,384 B for both). 254,771,200 = 200 × (20·1024 + 1024² + 1024·200) exactly: the recurrent
+  matrices V of both layers were missing. Cause: our `RadLIFLayer` computed `st @ V.weight.t()` while upstream
+  calls `self.V(st)`; the harness counts SynOps through `nn.Linear` hooks, so the functional matmul was invisible
+  to Dense / Eff_ACs (accuracy unaffected, all pseudo results stay valid). Fixed to the module call (numerically
+  identical), with a regression test that counts Dense on a tiny RSNN (fails before the fix: 600 vs 1240).
+- The first cost pre-check numbers for the final system (Eff_ACs 25.8M) are therefore INVALID and not reported;
+  the baseline row (upstream module) is unaffected: base_val acc 84.29 ± 0.05, Eff_ACs 71.18M, activation
+  sparsity 0.917. Re-run of the pre-check pending.
