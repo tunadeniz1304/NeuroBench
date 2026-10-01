@@ -326,3 +326,27 @@
   separately. Win condition 2 is therefore met on the mean but not for every seed; the report shows the per-seed
   points on the accuracy-vs-Eff_ACs Pareto plot instead of only the mean. No change to the system (no tuning on
   cost after seeing these numbers); proceed to the official run with the Phase 4 configuration.
+
+## 2026-10-01 15:20 UTC — aborted official-eval invocation (no data read, not counted)
+- First `nbfscil.official_eval` call with the final config stopped at `load_cache("base_test")`:
+  FileNotFoundError, the A100 runtime had only base_train / base_val caches (its setup cell built those two).
+  Nothing was evaluated and no test data was loaded; no result line was written. Not counted against the
+  budget. base_test / evaluation caches then built with `nbfscil.cache --splits base_test evaluation`.
+
+## 2026-10-01 15:48 UTC — OFFICIAL RUN 2/5: final configuration
+- Config `configs/final/clip_cl2n_8bit.yaml` (git 15622d7, which includes the SynOps fix c3807ca): backbones
+  `cos_1024_amp_clip_s{0,1,2}` + Hebbian CL2N 8 bit, official seeds 0-2 (backbone seed = session seed).
+  Full record: last line of `results/official_runs.jsonl`.
+- **Session average 86.93 ± 0.40** (per seed 86.56 / 86.75 / 87.49); base (session 0) 93.48 ± 0.26; last session
+  81.86 ± 0.53; novel-class (query) accuracy averaged over sessions 74.08 ± 1.22.
+  Mean accuracy per session 0-10: 93.48 91.68 90.34 88.72 87.34 86.33 85.31 84.73 83.77 82.69 81.86.
+- Reference (official run 1, same harness): our baseline reproduction 76.09 ± 0.36, last session 70.05,
+  novel 59.52 ± 1.67; published SNN 75.27 / 93.48 base; published M5 ANN 89.27.
+- Cost (harness): Footprint 13,550,384 B for both (+5,124 B integer learner state for ours, +0.04 %);
+  Dense 674,201,600 for both; Eff_MACs 0; Eff_ACs (mean over the 11 sessions) 68.50M ± 5.90M vs baseline
+  71.20M ± 0.08M (−3.8 %); per seed 76.72M / 63.16M / 65.62M, so backbone seed 0 is +7.8 % above the baseline;
+  activation sparsity 0.900 ± 0.008 vs 0.917; connection sparsity 0.051 / 0.048 / 0.048 vs 0.020.
+- Win conditions: (1) +10.8 pts over our baseline rerun and +11.7 over the published SNN, 2.3 pts below the M5
+  ANN. (2) Eff_ACs below the baseline on the mean, not for seed 0; footprint equal in parameters plus 5 KB learner
+  state: reported per seed on the Pareto plot. (3) incremental learning is the integer local Hebbian CL2N rule.
+- Budget: 2/5 used. No further official runs are planned for this configuration.
