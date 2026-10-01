@@ -1,7 +1,8 @@
 # Leaderboard row draft (Keyword FSCIL, `leaderboard.rst`)
 
-Draft only. Fill in from the final official run in `results/official_runs.jsonl` (mean over seeds;
-std goes into the PR text). Not submitted.
+Draft only, not submitted. Values from official run 2/5 in `results/official_runs.jsonl` (mean over seeds
+0-2; std goes into the PR text). Dense / Eff_ACs are the neurobench 2.3.0 per-sample values divided by T = 200
+to match the existing rows (see the units item below). Set the date when submitting.
 
 Format copied from upstream `leaderboard.rst` (commit e521c28):
 
@@ -13,18 +14,18 @@ Format copied from upstream `leaderboard.rst` (commit e521c28):
 +-----------+-----------------------------------+-----------+------------------+---------------------+---------------------+---------+--------------------+--------------------+---------------+
 | SNN       | (93.48% / 75.27%)                 | 1.36E7    | 200              | 0.0                 | 0.916               | 3.39E6  | 0                  | 3.65E5             | 2024-01-17    |
 +-----------+-----------------------------------+-----------+------------------+---------------------+---------------------+---------+--------------------+--------------------+---------------+
-| TODO name | (TODO% / TODO%)                   | TODO      | 200              | TODO                | TODO                | TODO    | 0                  | TODO               | TODO          |
+| SNN-CL2N  | (93.48% / 86.93%)                 | 1.36E7    | 200              | 0.049               | 0.900               | 3.37E6  | 0                  | 3.39E5             | YYYY-MM-DD    |
 +-----------+-----------------------------------+-----------+------------------+---------------------+---------------------+---------+--------------------+--------------------+---------------+
 ```
 
 ## Checklist before filling in
-- [ ] Numbers come from one official run (config + commit recorded), mean over ≥ 3 seeds.
-- [ ] Base accuracy is measured with the incremental (prototype) readout; say so in the PR, because the
+- [x] Numbers come from one official run (config + commit recorded), mean over ≥ 3 seeds.
+- [x] Base accuracy is measured with the incremental (prototype) readout; say so in the PR, because the
       existing SNN row uses the backprop-trained readout for base accuracy.
-- [ ] Footprint includes the learner state beyond parameters (`extra_footprint_bytes`), or the PR states
+- [x] Footprint includes the learner state beyond parameters (`extra_footprint_bytes`), or the PR states
       explicitly that it is listed separately.
-- [ ] Eff_ACs / Dense / Activation Sparsity: which session they refer to (upstream copies session 0).
-- [ ] Units: neurobench 2.3.0 gives Dense / Eff_ACs summed over T = 200 steps; the existing rows are ≈ 200×
+- [x] Eff_ACs / Dense / Activation Sparsity: which session they refer to (upstream copies session 0).
+- [x] Units: neurobench 2.3.0 gives Dense / Eff_ACs summed over T = 200 steps; the existing rows are ≈ 200×
       smaller (our baseline rerun: 6.74E8 / 7.12E7 vs 3.39E6 / 3.65E5). Report both, or ask the maintainers
       which convention the table uses; never mix them in one table.
 - [ ] Column widths re-aligned so the RST grid table still parses (`rst2html` / docs build).
